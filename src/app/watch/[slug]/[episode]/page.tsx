@@ -38,7 +38,13 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
         <span>•</span><span className="text-white">ตอนที่ {ep.number}</span>
       </div>
 
-      <VideoPlayer title={`${anime.titleTh} — ตอนที่ ${ep.number} ${ep.titleTh}`} />
+      <VideoPlayer
+        title={`${anime.titleTh} — ตอนที่ ${ep.number} ${ep.titleTh}`}
+        hlsUrl={ep.hlsUrl}
+        poster={ep.thumbnail}
+        animeSlug={anime.slug}
+        episodeNumber={ep.number}
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {prev && <Link href={`/watch/${anime.slug}/${prev}`} className="rounded-full bg-white/[0.06] border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/10 flex items-center gap-1"><ChevronLeft className="h-4 w-4" />ตอนก่อนหน้า</Link>}

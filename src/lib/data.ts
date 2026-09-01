@@ -1,5 +1,14 @@
-export type Episode = { id: string; number: number; title: string; titleTh: string; duration: string; thumbnail: string; views: number; updatedAt: string; };
+export type Episode = { id: string; number: number; title: string; titleTh: string; duration: string; thumbnail: string; views: number; updatedAt: string; hlsUrl?: string; };
 export type Anime = { id: string; slug: string; title: string; titleTh: string; titleEn: string; description: string; cover: string; banner: string; year: number; season: string; episodesTotal: number; episodes: Episode[]; rating: number; views: number; genres: string[]; status: "กำลังฉาย" | "จบแล้ว" | "ยังไม่ฉาย"; studio: string; duration: string; featured?: boolean; trendingRank?: number; };
+const HLS_DEMO = [
+  "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+  "https://test-streams.mux.dev/bbb_30fps/bbb_30fps.m3u8",
+  "https://test-streams.mux.dev/caminandes/caminandes.m3u8",
+];
+// ตั้งค่า NEXT_PUBLIC_HLS_BASE_URL ใน .env เพื่อชี้ไป R2/Cloudflare Stream จริง เช่น https://your.r2.dev/hls
+// ตัวอย่าง: NEXT_PUBLIC_HLS_BASE_URL=https://your.r2.dev/hls -> /<slug>/ep-1/master.m3u8
+export const HLS_BASE = process.env.NEXT_PUBLIC_HLS_BASE_URL || "";
+
 export const animes: Anime[] = [
   {
     id: "1",
@@ -27,6 +36,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx176496-9BDMjAZGEbq4.png",
       views: 4940000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -58,6 +68,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-qQTzQnEJJ3oB.jpg",
       views: 5185000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -89,6 +100,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx171018-60q1B6GK2Ghb.jpg",
       views: 4905000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -119,6 +131,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153288-25FBfFJzEQ5O.jpg",
       views: 4835000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -149,6 +162,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx166240-PBV7zukIHW7V.png",
       views: 4765000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -179,6 +193,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx163270-wboZJp0ybwVK.jpg",
       views: 4695000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -209,6 +224,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx166531-dAL5MsqDHUkj.jpg",
       views: 4975000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -239,6 +255,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx146065-IjirxRK26O03.png",
       views: 4835000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -268,6 +285,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg",
       views: 5045000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -297,6 +315,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx145064-hSNRJM03pvv1.jpg",
       views: 5010000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -326,6 +345,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/b158927-lfO85WVguYgc.png",
       views: 4800000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
@@ -355,6 +375,7 @@ export const animes: Anime[] = [
       title: `Episode ${i + 1}`,
       titleTh: `ตอนที่ ${i + 1}`,
       duration: "23:42",
+      hlsUrl: HLS_DEMO[i % HLS_DEMO.length],
       thumbnail: "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx110277-sKUNXAsWMNFw.jpg",
       views: 5045000 - i * 18000,
       updatedAt: `2024-12-${String(10 + i).padStart(2, "0")}`,
