@@ -7,8 +7,9 @@ import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
 import { videoJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
-import { Star, Eye, Sparkles } from "lucide-react";
+import { Star, Eye } from "lucide-react";
 import { formatViews } from "@/lib/utils";
+import LegalPlatforms from "@/components/LegalPlatforms";
 
 async function resolveAnime(slug: string) {
   const local = getAnimeBySlug(slug);
@@ -100,15 +101,9 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
                 hlsUrl={undefined}
               />
 
-              {/* Official links */}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="text-xs text-zinc-500 py-2 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> ดูถูกลิขสิทธิ์:
-                </span>
-                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(anime.titleEn + " ซับไทย")}`} target="_blank" rel="noopener" className="rounded-full bg-white text-black px-4 py-2 text-xs font-bold hover:bg-zinc-100">YouTube</a>
-                <a href={`https://www.bilibili.tv/search?q=${encodeURIComponent(anime.titleTh)}`} target="_blank" rel="noopener" className="rounded-full bg-[#00a1d6] text-white px-4 py-2 text-xs font-bold">Bilibili</a>
-                <a href={`https://www.iq.com/search?query=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#1cc749] text-white px-4 py-2 text-xs font-bold">iQIYI</a>
-                <a href={`https://www.crunchyroll.com/search?q=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#f47521] text-white px-4 py-2 text-xs font-bold">Crunchyroll</a>
+              {/* Legal platforms per anime */}
+              <div className="mt-3">
+                <LegalPlatforms anime={anime} compact />
               </div>
 
               {/* Title block */}

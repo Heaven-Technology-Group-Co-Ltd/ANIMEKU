@@ -8,6 +8,7 @@ import { animeJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
+import LegalPlatforms from "@/components/LegalPlatforms";
 
 async function resolveAnime(slug: string) {
   const local = getAnimeBySlug(slug);
@@ -102,12 +103,8 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
               <li>• เหมาะกับคนชอบแนว {anime.genres[0]}{anime.genres[1] ? ` และ ${anime.genres[1]}` : ""} — ดูตัวอย่างก่อนตัดสินใจ</li>
             </ul>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="text-xs text-zinc-500 py-2 flex items-center gap-1">ดูถูกลิขสิทธิ์:</span>
-            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(anime.titleEn + " ซับไทย")}`} target="_blank" rel="noopener" className="rounded-full bg-white text-black px-4 py-2 text-xs font-bold hover:bg-zinc-100">YouTube</a>
-            <a href={`https://www.bilibili.tv/search?q=${encodeURIComponent(anime.titleTh)}`} target="_blank" rel="noopener" className="rounded-full bg-[#00a1d6] text-white px-4 py-2 text-xs font-bold">Bilibili</a>
-            <a href={`https://www.iq.com/search?query=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#1cc749] text-white px-4 py-2 text-xs font-bold">iQIYI</a>
-            <a href={`https://www.crunchyroll.com/search?q=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#f47521] text-white px-4 py-2 text-xs font-bold">Crunchyroll</a>
+          <div className="mt-4">
+            <LegalPlatforms anime={anime} />
           </div>
         </div>
         <h2 className="mt-10 mb-4 text-lg font-bold text-white">เรื่องที่คล้ายกัน</h2>
