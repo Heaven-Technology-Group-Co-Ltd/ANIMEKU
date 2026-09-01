@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAnimeBySlug, animes } from "@/lib/data";
 import { videoJsonLd, breadcrumbJsonLd } from "@/lib/seo";
-import VideoPlayer from "@/components/VideoPlayer";
+import TrailerPlayer from "@/components/TrailerPlayer";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export async function generateStaticParams() {
@@ -38,13 +38,23 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
         <span>•</span><span className="text-white">ตอนที่ {ep.number}</span>
       </div>
 
-      <VideoPlayer
+      <TrailerPlayer
         title={`${anime.titleTh} — ตอนที่ ${ep.number} ${ep.titleTh}`}
-        hlsUrl={ep.hlsUrl}
-        poster={ep.thumbnail}
+        youtubeId={anime.trailerYoutubeId}
+        youtubeDubId={anime.trailerDubYoutubeId}
+        thumbnail={anime.trailerThumbnail || ep.thumbnail}
         animeSlug={anime.slug}
         episodeNumber={ep.number}
+        hlsUrl={ep.hlsUrl}
       />
+
+      {/* ลิงก์ไปดูถูกลิขสิทธิ์ */}
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <span className="text-zinc-500 py-2">ดูถูกลิขสิทธิ์:</span>
+        <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(anime.titleEn + " ซับไทย")}`} target="_blank" rel="noopener" className="rounded-full bg-white text-black px-3 py-2 font-semibold hover:bg-zinc-100">YouTube</a>
+        <a href={`https://www.bilibili.tv/search?q=${encodeURIComponent(anime.titleTh)}`} target="_blank" rel="noopener" className="rounded-full bg-[#00a1d6] text-white px-3 py-2 font-semibold">Bilibili</a>
+        <a href={`https://www.iq.com/search?query=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#1cc749] text-white px-3 py-2 font-semibold">iQIYI</a>
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {prev && <Link href={`/watch/${anime.slug}/${prev}`} className="rounded-full bg-white/[0.06] border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/10 flex items-center gap-1"><ChevronLeft className="h-4 w-4" />ตอนก่อนหน้า</Link>}

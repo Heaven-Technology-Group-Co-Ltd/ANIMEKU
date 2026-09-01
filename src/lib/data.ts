@@ -1,5 +1,5 @@
 export type Episode = { id: string; number: number; title: string; titleTh: string; duration: string; thumbnail: string; views: number; updatedAt: string; hlsUrl?: string; };
-export type Anime = { id: string; slug: string; title: string; titleTh: string; titleEn: string; description: string; cover: string; banner: string; year: number; season: string; episodesTotal: number; episodes: Episode[]; rating: number; views: number; genres: string[]; status: "กำลังฉาย" | "จบแล้ว" | "ยังไม่ฉาย"; studio: string; duration: string; featured?: boolean; trendingRank?: number; };
+export type Anime = { id: string; slug: string; title: string; titleTh: string; titleEn: string; description: string; cover: string; banner: string; year: number; season: string; episodesTotal: number; episodes: Episode[]; rating: number; views: number; genres: string[]; status: "กำลังฉาย" | "จบแล้ว" | "ยังไม่ฉาย"; studio: string; duration: string; featured?: boolean; trendingRank?: number; trailerYoutubeId?: string; trailerDubYoutubeId?: string; trailerThumbnail?: string; };
 const HLS_DEMO = [
   "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   "https://test-streams.mux.dev/bbb_30fps/bbb_30fps.m3u8",
@@ -28,6 +28,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "A-1 Pictures",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "byJ7pxxhaDY",
+    trailerDubYoutubeId: "byJ7pxxhaDY",
+    trailerThumbnail: "https://i.ytimg.com/vi/byJ7pxxhaDY/hqdefault.jpg",
     featured: true,
     trendingRank: 1,
     episodes: Array.from({ length: 12 }, (_, i) => ({
@@ -60,6 +63,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "MADHOUSE",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "tR8YH0G67Rk",
+    trailerDubYoutubeId: "tR8YH0G67Rk",
+    trailerThumbnail: "https://i.ytimg.com/vi/tR8YH0G67Rk/hqdefault.jpg",
     featured: true,
     trendingRank: 2,
     episodes: Array.from({ length: 12 }, (_, i) => ({
@@ -92,6 +98,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "Science SARU",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "rJo1MnsuxyY",
+    trailerDubYoutubeId: "rJo1MnsuxyY",
+    trailerThumbnail: "https://i.ytimg.com/vi/rJo1MnsuxyY/hqdefault.jpg",
     featured: true,
     trendingRank: 3,
     episodes: Array.from({ length: 12 }, (_, i) => ({
@@ -124,6 +133,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "Production I.G",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "7n_mFVPeApw",
+    trailerDubYoutubeId: "7n_mFVPeApw",
+    trailerThumbnail: "https://i.ytimg.com/vi/7n_mFVPeApw/hqdefault.jpg",
     trendingRank: 4,
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
@@ -155,6 +167,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "ufotable",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "7w5Vfjozzb8",
+    trailerDubYoutubeId: "7w5Vfjozzb8",
+    trailerThumbnail: "https://i.ytimg.com/vi/7w5Vfjozzb8/hqdefault.jpg",
     trendingRank: 5,
     episodes: Array.from({ length: 8 }, (_, i) => ({
       id: `ep-${i + 1}`,
@@ -186,6 +201,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "CloverWorks",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "k5qM1PoLmUc",
+    trailerDubYoutubeId: "k5qM1PoLmUc",
+    trailerThumbnail: "https://i.ytimg.com/vi/k5qM1PoLmUc/hqdefault.jpg",
     trendingRank: 6,
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
@@ -217,6 +235,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "Doga Kobo",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "QMuajQlx64c",
+    trailerDubYoutubeId: "QMuajQlx64c",
+    trailerThumbnail: "https://i.ytimg.com/vi/QMuajQlx64c/hqdefault.jpg",
     trendingRank: 7,
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
@@ -248,6 +269,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "Studio Bind",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "ts5NGoDI1V0",
+    trailerDubYoutubeId: "ts5NGoDI1V0",
+    trailerThumbnail: "https://i.ytimg.com/vi/ts5NGoDI1V0/hqdefault.jpg",
     trendingRank: 8,
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
@@ -279,6 +303,9 @@ export const animes: Anime[] = [
     status: "กำลังฉาย",
     studio: "Toei Animation",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "S8_YwFLCh4U",
+    trailerDubYoutubeId: "S8_YwFLCh4U",
+    trailerThumbnail: "https://i.ytimg.com/vi/S8_YwFLCh4U/hqdefault.jpg",
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
       number: i + 1,
@@ -309,6 +336,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "MAPPA",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "O6qVieflwqs",
+    trailerDubYoutubeId: "O6qVieflwqs",
+    trailerThumbnail: "https://i.ytimg.com/vi/O6qVieflwqs/hqdefault.jpg",
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
       number: i + 1,
@@ -339,6 +369,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "WIT STUDIO",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "W2tMsaAVjD0",
+    trailerDubYoutubeId: "W2tMsaAVjD0",
+    trailerThumbnail: "https://i.ytimg.com/vi/W2tMsaAVjD0/hqdefault.jpg",
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
       number: i + 1,
@@ -369,6 +402,9 @@ export const animes: Anime[] = [
     status: "จบแล้ว",
     studio: "MAPPA",
     duration: "24 นาที/ตอน",
+    trailerYoutubeId: "MUCN-JwUvbY",
+    trailerDubYoutubeId: "MUCN-JwUvbY",
+    trailerThumbnail: "https://i.ytimg.com/vi/MUCN-JwUvbY/hqdefault.jpg",
     episodes: Array.from({ length: 12 }, (_, i) => ({
       id: `ep-${i + 1}`,
       number: i + 1,
