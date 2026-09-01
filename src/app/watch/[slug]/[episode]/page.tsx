@@ -10,8 +10,11 @@ import { ChevronLeft, ChevronRight, Star, Eye, Clock, ListVideo, Sparkles } from
 import { formatViews } from "@/lib/utils";
 
 export async function generateStaticParams() {
-  // ครบทุกตอนทุกเรื่อง (12 เรื่อง x ~12 ตอน = 144 หน้า)
-  return animes.flatMap((a) => a.episodes.map((ep) => ({ slug: a.slug, episode: String(ep.number) })));
+  // ครบทุกตอน + เรื่องยังไม่ฉายให้มี /1 สำหรับดู Trailer
+  return animes.flatMap((a) => {
+    if (a.episodes.length === 0) return [{ slug: a.slug, episode: "1" }];
+    return a.episodes.map((ep) => ({ slug: a.slug, episode: String(ep.number) }));
+  });
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; episode: string }> }): Promise<Metadata> {
@@ -31,7 +34,21 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
   const anime = getAnimeBySlug(slug);
   if (!anime) notFound();
   const epNum = Number(episode);
-  const ep = anime.episodes.find((e) => e.number === epNum);
+  let ep = anime.episodes.find((e) => e.number === epNum);
+  // เรื่องยังไม่ฉาย: ไม่มี episodes แต่ให้ดู Trailer ได้ที่ ep 1
+  if (!ep && anime.status === "ยังไม่ฉาย" && epNum === 1) {
+    ep = {
+      id: "trailer-1",
+      number: 1,
+      title: "Official Trailer",
+      titleTh: "ตัวอย่างหลัก",
+      duration: "01:32",
+      thumbnail: anime.trailerThumbnail || anime.cover,
+      views: anime.views,
+      updatedAt: anime.season,
+      hlsUrl: undefined,
+    };
+  }
   if (!ep) notFound();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234";
   const prev = epNum > 1 ? epNum - 1 : null;
