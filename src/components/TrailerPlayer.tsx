@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Share2, Bookmark } from "lucide-react";
+import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Share2, Bookmark, Subtitles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -41,6 +41,9 @@ function loadYouTubeAPI(): Promise<void> {
 }
 
 export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnail, animeSlug, hlsUrl }: Props) {
+  const clean = (v?: string) => v?.trim();
+  const youtubeIdClean = clean(youtubeId);
+  const youtubeDubClean = clean(youtubeDubId);
   const [mode, setMode] = useState<"sub" | "dub">("sub");
   const [playing, setPlaying] = useState(false);
   const [theater, setTheater] = useState(false);
@@ -51,15 +54,19 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [captionTracks, setCaptionTracks] = useState<{ lang: string; name: string; isAuto: boolean }[]>([]);
+  const [selectedCaption, setSelectedCaption] = useState<string>("th");
+  const [showCaptionMenu, setShowCaptionMenu] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const playerContainerId = useRef(`yt-player-${animeSlug}`);
   const timerRef = useRef<number | null>(null);
 
-  const activeId = mode === "dub" && youtubeDubId ? youtubeDubId : youtubeId;
+  const activeId = mode === "dub" && youtubeDubClean ? youtubeDubClean : youtubeIdClean;
   const hasYoutube = !!activeId;
   const showHlsFallback = !hasYoutube && !!hlsUrl;
+  const hasRealDub = !!youtubeDubClean && youtubeDubClean !== youtubeIdClean;
 
   const formatTime = (s: number) => {
     if (!s || isNaN(s)) return "0:00";
@@ -67,6 +74,37 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     const sec = Math.floor(s % 60).toString().padStart(2, "0");
     return `${m}:${sec}`;
   };
+
+  // Fetch caption tracks for active video (all languages)
+  useEffect(() => {
+    if (!activeId) {
+      setCaptionTracks([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/youtube/captions?v=${activeId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        const tracks = (j.tracks || []) as { lang: string; name: string; isAuto: boolean }[];
+        setCaptionTracks(tracks);
+        // auto-select Thai if exists, else English, else first
+        if (tracks.length > 0) {
+          const hasTh = tracks.find((t) => t.lang === "th");
+          const hasEn = tracks.find((t) => t.lang === "en");
+          const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
+          setSelectedCaption(pick);
+        } else {
+          setSelectedCaption("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCaptionTracks([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId]);
 
   // Load API when entering playing state
   useEffect(() => {
@@ -108,6 +146,9 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           fs: 0,
           disablekb: 1,
           autoplay: 1,
+          cc_load_policy: 1,
+          cc_lang_pref: selectedCaption || "th",
+          hl: selectedCaption || "th",
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
@@ -115,6 +156,13 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             setDuration(e.target.getDuration?.() || 0);
             e.target.setVolume(volume);
             if (muted) e.target.mute();
+            // enable captions module and set language
+            try {
+              e.target.loadModule?.("captions");
+              if (selectedCaption) {
+                e.target.setOption?.("captions", "track", { languageCode: selectedCaption });
+              }
+            } catch {}
             e.target.playVideo();
             setIsPlaying(true);
           },
@@ -135,6 +183,20 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
   }, [isYTReady, playing, activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update caption when language changes
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p || !playing || !isYTReady) return;
+    try {
+      p.loadModule?.("captions");
+      if (selectedCaption) {
+        p.setOption?.("captions", "track", { languageCode: selectedCaption });
+      } else {
+        p.setOption?.("captions", "track", {});
+      }
+    } catch {}
+  }, [selectedCaption, playing, isYTReady]);
 
   // Poll time
   useEffect(() => {
@@ -379,9 +441,51 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                   </div>
 
                   <div className="ml-auto flex items-center gap-1.5">
+                    {/* CC menu */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowCaptionMenu(v => !v)}
+                        className={cn("h-8 w-8 grid place-items-center rounded-full border text-white", selectedCaption ? "bg-[#ff3b82] border-[#ff3b82]" : "bg-white/10 border-white/10 hover:bg-white/20")}
+                        title={`ซับ: ${captionTracks.length} ภาษา`}
+                      >
+                        <Subtitles className="h-4 w-4" />
+                      </button>
+                      {showCaptionMenu && (
+                        <div className="absolute bottom-full right-0 mb-2 w-56 rounded-2xl border border-white/10 bg-[#12121a] p-2 shadow-2xl z-10">
+                          <p className="px-2 py-1 text-xs font-bold text-white flex items-center gap-1.5"><Subtitles className="h-3.5 w-3.5" /> ซับจากคลิปจริง • {captionTracks.length} ภาษา</p>
+                          <p className="px-2 text-[11px] text-zinc-500">ดึงจาก YouTube timedtext • แตะเพื่อสลับทันที</p>
+                          <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                            <button
+                              onClick={() => {
+                                setSelectedCaption("");
+                                setShowCaptionMenu(false);
+                              }}
+                              className={cn("w-full text-left rounded-xl px-3 py-1.5 text-xs flex items-center justify-between", !selectedCaption ? "bg-white text-black font-bold" : "text-zinc-300 hover:bg-white/10")}
+                            >
+                              ปิดซับ <span className="text-[11px] text-zinc-500">Off</span> {!selectedCaption && <Check className="h-3.5 w-3.5" />}
+                            </button>
+                            {captionTracks.map((t) => (
+                              <button
+                                key={t.lang}
+                                onClick={() => {
+                                  setSelectedCaption(t.lang);
+                                  setShowCaptionMenu(false);
+                                }}
+                                className={cn("w-full text-left rounded-xl px-3 py-1.5 text-xs flex items-center justify-between", selectedCaption === t.lang ? "bg-[#ff3b82] text-white font-bold" : "text-zinc-300 hover:bg-white/10")}
+                              >
+                                <span>{t.name || t.lang} <span className="text-[11px] opacity-60">({t.lang})</span> {t.isAuto && <span className="text-[10px] bg-white/15 px-1 rounded">Auto</span>}</span>
+                                {selectedCaption === t.lang && <Check className="h-3.5 w-3.5" />}
+                              </button>
+                            ))}
+                            {captionTracks.length === 0 && <p className="px-3 py-2 text-xs text-zinc-500">คลิปนี้ไม่มีซับฝัง • ใช้ซับ Auto ของ YouTube ได้</p>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white border border-white/10">
-                      {mode === "sub" ? "ซับไทย" : "พากย์ไทย"} • Custom
+                      {mode === "sub" ? "ซับไทย" : "พากย์ไทย"} • {captionTracks.length > 0 ? `${captionTracks.length}ภาษา` : "Custom"}
                     </span>
+                    {hasRealDub && <span className="hidden lg:inline-flex rounded-full bg-emerald-500 px-2 py-1 text-xs font-black text-white">พากย์จริง ✓</span>}
                     <button onClick={() => setTheater(v => !v)} className="hidden sm:grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white" title="Theater">
                       {theater ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                     </button>
@@ -413,7 +517,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         <button className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-white hover:bg-white/10">
           <Share2 className="h-3.5 w-3.5" /> แชร์
         </button>
-        <span className="text-zinc-500 ml-1 hidden sm:inline">YouTube iframe • Custom UI • ตัวอย่างแนะนำ • ควบคุมเองทั้งหมด (เล่น/หยุด/Seek/เสียง/Fullscreen)</span>
+        <span className="text-zinc-500 ml-1 hidden sm:inline">YouTube iframe • Custom UI • ตัวอย่างแนะนำ • ซับจริง {captionTracks.length}ภาษา {captionTracks.map(t=>t.lang).slice(0,4).join("/")} {hasRealDub ? "• พากย์ไทยจริง" : "• พากย์ไทยตาม Trailer หลัก"}</span>
         {theater && (
           <button onClick={() => setTheater(false)} className="ml-auto rounded-full bg-white text-black px-4 py-1.5 font-bold">
             ออกจาก Theater
