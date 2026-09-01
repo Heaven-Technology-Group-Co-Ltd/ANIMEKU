@@ -56,17 +56,35 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{anime.duration}</span>
               <span>{anime.studio}</span>
             </div>
-            <Link href={`/watch/${anime.slug}/1`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#ff5a96]">
-              <Play className="h-4 w-4 fill-white" /> ดูตอนที่ 1
-            </Link>
+            {anime.status === "ยังไม่ฉาย" ? (
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black text-black">⏳ ยังไม่ฉาย • {anime.season}</span>
+            ) : (
+              <Link href={`/watch/${anime.slug}/1`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#ff5a96]">
+                <Play className="h-4 w-4 fill-white" /> ดูตอนที่ 1
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 py-6">
         <p className="max-w-3xl text-sm leading-6 text-zinc-300">{anime.description}</p>
-        <h2 className="mt-8 mb-4 text-lg font-bold text-white">ตอนทั้งหมด • {anime.episodesTotal} ตอน</h2>
-        <EpisodeList anime={anime} />
+        <div className="mt-3 flex gap-2 text-xs">
+          <span className={`rounded-full px-3 py-1.5 font-bold ${anime.status==="ยังไม่ฉาย" ? "bg-amber-500 text-black" : anime.status==="กำลังฉาย" ? "bg-[#22c55e] text-white" : "bg-zinc-700 text-white"}`}>{anime.status}</span>
+          <span className="rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-zinc-300">{anime.season} • {anime.year}</span>
+        </div>
+        {anime.status === "ยังไม่ฉาย" ? (
+          <div className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-6 text-center">
+            <p className="text-amber-300 font-bold">⏳ เรื่องนี้ยังไม่ฉาย</p>
+            <p className="text-sm text-zinc-400 mt-1">ตัวอย่าง Trailer ดูได้แล้ว • ตอนเต็มจะมา {anime.season}</p>
+            <Link href={`/watch/${anime.slug}/1`} className="mt-3 inline-flex rounded-full bg-white text-black px-5 py-2 text-sm font-bold">ดู Trailer</Link>
+          </div>
+        ) : (
+          <>
+            <h2 className="mt-8 mb-4 text-lg font-bold text-white">ตอนทั้งหมด • {anime.episodesTotal} ตอน</h2>
+            <EpisodeList anime={anime} />
+          </>
+        )}
         <h2 className="mt-10 mb-4 text-lg font-bold text-white">เรื่องที่คล้ายกัน</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           {animes.filter((a) => a.id !== anime.id).slice(0, 6).map((a) => (

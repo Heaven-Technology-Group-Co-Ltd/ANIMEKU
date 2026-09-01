@@ -53,13 +53,36 @@ export default function Home() {
         </div>
       </Section>
 
-      <Section title="อนิเมะทั้งหมด" href="/category/ทั้งหมด">
+      <Section title="📺 กำลังฉาย & จบแล้ว" subtitle="ดูได้ทันที 16 เรื่อง" href="/category/ทั้งหมด">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
-          {animes.map((a) => (
+          {animes.filter((a) => a.status !== "ยังไม่ฉาย").map((a) => (
             <AnimeCard key={a.id} anime={a} />
           ))}
         </div>
       </Section>
+
+      <Section title="⏳ ยังไม่ฉาย • เร็วๆนี้" subtitle="4 เรื่องที่รอคอย • กดดูตัวอย่างได้ก่อน">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {animes.filter((a) => a.status === "ยังไม่ฉาย").map((a) => (
+            <AnimeCard key={a.id} anime={a} />
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">* เรื่องที่ยังไม่ฉายจะแสดงป้าย “ยังไม่ฉาย • เร็วๆนี้” และดูได้เฉพาะ Trailer (ซับไทย/พากย์ไทย)</p>
+      </Section>
+
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="rounded-2xl border border-white/10 bg-[#12121a] p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-white">รวมทั้งหมด 20 เรื่อง • 16 เรื่องดูได้ทันที • 4 เรื่องยังไม่ฉาย</p>
+            <p className="text-xs text-zinc-500">ข้อมูลจริงจาก AniList • รูปปก/Banner/ Trailer YouTube แท้ • อัปเดตล่าสุด 2025-2026</p>
+          </div>
+          <div className="flex gap-2 text-xs">
+            <span className="rounded-full bg-[#22c55e] px-3 py-1.5 font-bold text-white">กำลังฉาย: {animes.filter(a=>a.status==="กำลังฉาย").length}</span>
+            <span className="rounded-full bg-zinc-700 px-3 py-1.5 font-bold text-white">จบแล้ว: {animes.filter(a=>a.status==="จบแล้ว").length}</span>
+            <span className="rounded-full bg-amber-500 px-3 py-1.5 font-black text-black">ยังไม่ฉาย: {animes.filter(a=>a.status==="ยังไม่ฉาย").length}</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

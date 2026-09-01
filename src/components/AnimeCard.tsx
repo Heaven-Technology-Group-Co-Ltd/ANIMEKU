@@ -31,11 +31,14 @@ export function AnimeCard({ anime, rank }: { anime: Anime; rank?: number }) {
           <span
             className={cn(
               "rounded-full px-2 py-1 text-[10px] font-bold tracking-wide text-white",
-              anime.status === "กำลังฉาย" ? "bg-[#22c55e]" : anime.status === "จบแล้ว" ? "bg-zinc-700" : "bg-[#ff3b82]"
+              anime.status === "กำลังฉาย" ? "bg-[#22c55e]" : anime.status === "จบแล้ว" ? "bg-zinc-700" : "bg-amber-500 text-black"
             )}
           >
             {anime.status}
           </span>
+          {anime.status === "ยังไม่ฉาย" && (
+            <span className="rounded-full bg-amber-400 px-2 py-1 text-[10px] font-black text-black">เร็วๆนี้</span>
+          )}
         </div>
 
         {/* Rating */}
