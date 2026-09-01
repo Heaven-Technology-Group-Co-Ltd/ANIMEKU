@@ -14,18 +14,16 @@ export const customSubs: Record<string, Cue[]> = {
     { start: 14, end: 18, text: "ตัวอย่างแนะนำ — ซับไทยทำเองโดย ANIMEKU" },
     { start: 18, end: 22, text: "ดูถูกลิขสิทธิ์ได้ที่ Crunchyroll / Bilibili / iQIYI" },
   ],
-  // 597 Gp-H_YOcYTM — Neko no Ongaeshi / The Cat Returns — trailer 2:08, +1.5s delay to match audio (ซับขึ้นก่อน → ดีเลย์)
+  // 597 Gp-H_YOcYTM — Neko no Ongaeshi — เสียงพูดเริ่ม 16วิ (user confirm)
   "Gp-H_YOcYTM": [
-    { start: 1.5, end: 4.7, text: "The Cat Returns — Neko no Ongaeshi" },
-    { start: 4.7, end: 9.3, text: "จากสตูดิโอผู้สร้าง Spirited Away" },
-    { start: 9.3, end: 13.0, text: "ฮารุ สาวมัธยมที่เบื่อชีวิตจำเจ" },
-    { start: 13.0, end: 17.4, text: "เธอช่วยแมวตัวหนึ่งจากรถบรรทุก" },
-    { start: 17.4, end: 21.7, text: "และโลกของเธอก็เปลี่ยนไปตลอดกาล" },
-    { start: 21.7, end: 26.1, text: "ของขวัญประหลาด — หนูห่อของขวัญ" },
-    { start: 26.1, end: 30.6, text: "และคำขอแต่งงานจากเจ้าชายแห่งอาณาจักรแมว!" },
-    { start: 30.6, end: 35.3, text: "ฮารุต้องเดินทางสู่อาณาจักรแมว" },
-    { start: 35.3, end: 39.9, text: "บารอน แมวสุภาพบุรุษจะพาเธอกลับมาได้ไหม?" },
-    { start: 39.9, end: 43.5, text: "ตัวอย่างแนะนำ — ซับไทยเป๊ะ โดย ANIMEKU" },
+    { start: 16.0, end: 19.8, text: "ฮารุ สาวมัธยมที่เบื่อชีวิตจำเจ" },
+    { start: 19.8, end: 23.4, text: "เธอช่วยแมวตัวหนึ่งจากรถบรรทุก" },
+    { start: 23.4, end: 27.0, text: "และโลกของเธอก็เปลี่ยนไปตลอดกาล" },
+    { start: 27.0, end: 31.2, text: "ของขวัญประหลาด — หนูห่อของขวัญ" },
+    { start: 31.2, end: 35.5, text: "และคำขอแต่งงานจากเจ้าชายแห่งอาณาจักรแมว!" },
+    { start: 35.5, end: 39.8, text: "ฮารุต้องเดินทางสู่อาณาจักรแมว" },
+    { start: 39.8, end: 44.1, text: "บารอน แมวสุภาพบุรุษจะพาเธอกลับมาได้ไหม?" },
+    { start: 44.1, end: 48.0, text: "The Cat Returns — ตัวอย่างแนะนำ • ANIMEKU" },
   ],
 };
 
