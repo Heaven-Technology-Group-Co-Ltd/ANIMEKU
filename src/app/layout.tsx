@@ -21,25 +21,25 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234"),
   title: {
-    default: "ANIMEKU — ดูอนิเมะถูกลิขสิทธิ์ พากย์ไทย ซับไทย 4K",
+    default: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์ รีวิว จัดอันดับ ซับไทย พากย์ไทย",
     template: "%s | ANIMEKU",
   },
   description:
-    "ดูอนิเมะออนไลน์ถูกลิขสิทธิ์ พากย์ไทย ซับไทย ภาพคมชัดระดับ 4K อัปเดตตอนใหม่ทุกวัน เร็วที่สุดในไทย - ANIMEKU",
-  keywords: ["ดูอนิเมะ", "อนิเมะซับไทย", "อนิเมะพากย์ไทย", "anime", "ดูอนิเมะออนไลน์", "ANIMEKU"],
+    "แนะนำอนิเมะถูกลิขสิทธิ์ รีวิว จัดอันดับ ซับไทย พากย์ไทย อัปเดตทุกวัน คัดมาแล้วว่าเด็ดจริง — ANIMEKU แหล่งแนะนำอนิเมะอันดับ 1",
+  keywords: ["แนะนำอนิเมะ", "รีวิวอนิเมะ", "จัดอันดับอนิเมะ", "อนิเมะซับไทย", "อนิเมะพากย์ไทย", "anime", "ANIMEKU"],
   authors: [{ name: "ANIMEKU" }],
   creator: "ANIMEKU",
   openGraph: {
     type: "website",
     locale: "th_TH",
     siteName: "ANIMEKU",
-    title: "ANIMEKU — ดูอนิเมะถูกลิขสิทธิ์",
-    description: "ดูอนิเมะซับไทย พากย์ไทย 4K อัปเดตไวที่สุด",
+    title: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์",
+    description: "แนะนำอนิเมะ รีวิว จัดอันดับ ซับไทย พากย์ไทย คัดมาแล้วว่าเด็ดจริง",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ANIMEKU — ดูอนิเมะถูกลิขสิทธิ์",
-    description: "ดูอนิเมะซับไทย พากย์ไทย 4K",
+    title: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์",
+    description: "แนะนำอนิเมะ รีวิว จัดอันดับ ซับไทย พากย์ไทย",
   },
   robots: {
     index: true,

@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const anime = getAnimeBySlug(slug);
   if (!anime) return {};
   return {
-    title: `${anime.titleTh} — ดูอนิเมะซับไทย พากย์ไทย`,
-    description: anime.description.slice(0, 155),
-    openGraph: { title: anime.titleTh, description: anime.description.slice(0, 155), images: [anime.cover] },
+    title: `แนะนำ ${anime.titleTh} — รีวิว จัดอันดับ ดูตัวอย่างแนะนำ | ANIMEKU`,
+    description: `แนะนำ ${anime.titleTh} — ${anime.description.slice(0, 130)} • รีวิว จัดอันดับ แนะนำอนิเมะถูกลิขสิทธิ์`,
+    openGraph: { title: `แนะนำ ${anime.titleTh}`, description: anime.description.slice(0, 155), images: [anime.cover] },
   };
 }
 
@@ -43,7 +43,8 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
             <Image src={anime.cover} alt={anime.titleTh} fill className="object-cover" sizes="128px" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{anime.titleTh}</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ff3b82] px-3 py-1 text-xs font-black text-white tracking-wide">⭐ แนะนำ • รีวิวจัดอันดับ</span>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black text-white leading-tight">{anime.titleTh}</h1>
             <p className="text-sm text-zinc-300">{anime.titleEn}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {anime.genres.map((g) => (
@@ -60,7 +61,7 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
               <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black text-black">⏳ ยังไม่ฉาย • {anime.season}</span>
             ) : (
               <Link href={`/watch/${anime.slug}/1`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#ff5a96]">
-                <Play className="h-4 w-4 fill-white" /> ดูตอนที่ 1
+                <Play className="h-4 w-4 fill-white" /> ดูตัวอย่างแนะนำ
               </Link>
             )}
           </div>
@@ -77,7 +78,7 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
           <div className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-6 text-center">
             <p className="text-amber-300 font-bold">⏳ เรื่องนี้ยังไม่ฉาย</p>
             <p className="text-sm text-zinc-400 mt-1">ตัวอย่าง Trailer ดูได้แล้ว • ตอนเต็มจะมา {anime.season}</p>
-            <Link href={`/watch/${anime.slug}/1`} className="mt-3 inline-flex rounded-full bg-white text-black px-5 py-2 text-sm font-bold">ดู Trailer</Link>
+            <Link href={`/watch/${anime.slug}/1`} className="mt-3 inline-flex rounded-full bg-white text-black px-5 py-2 text-sm font-bold">ดูตัวอย่างแนะนำ</Link>
           </div>
         ) : (
           <>

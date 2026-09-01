@@ -63,7 +63,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         </div>
         <div className="flex items-center gap-1.5">
           <span className="hidden sm:inline-flex rounded-full bg-amber-500/15 border border-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-300 items-center gap-1">
-            <Sparkles className="h-3 w-3" /> Trailer
+            <Sparkles className="h-3 w-3" /> ตัวอย่างแนะนำ
           </span>
           <button onClick={() => setTheater(v => !v)} className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/10 text-zinc-300" title="Theater">
             <Maximize2 className="h-4 w-4" />
@@ -100,7 +100,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             <div className="absolute bottom-0 w-full p-4 flex items-end justify-between">
               <div className="flex items-center gap-2">
                 <span className="rounded bg-red-600 px-2 py-1 text-xs font-black text-white tracking-widest">YouTube</span>
-                <span className="hidden sm:inline text-xs text-white/80">Official Trailer • {activeId}</span>
+                <span className="hidden sm:inline text-xs text-white/80">ตัวอย่างแนะนำ • Official PV • {activeId}</span>
               </div>
               <span className="text-xs text-white/60 hidden sm:inline">1080p • Adaptive</span>
             </div>
@@ -124,7 +124,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         <button className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-white hover:bg-white/10">
           <Share2 className="h-3.5 w-3.5" /> แชร์
         </button>
-        <span className="text-zinc-500 ml-1 hidden sm:inline">ที่มา: YouTube Official PV • ถ้ามีพากย์ไทยจริงจะแยกวิดีโอให้อัตโนมัติ</span>
+        <span className="text-zinc-500 ml-1 hidden sm:inline">ที่มา: YouTube Official PV • ตัวอย่างแนะนำ • ถ้ามีพากย์ไทยจริงจะแยกวิดีโอให้อัตโนมัติ</span>
         {theater && (
           <button onClick={() => setTheater(false)} className="ml-auto rounded-full bg-white text-black px-4 py-1.5 font-bold">
             ออกจาก Theater

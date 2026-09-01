@@ -24,8 +24,8 @@ export default function Hero({ anime }: { anime: Anime }) {
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-end">
           {/* Left */}
           <div className="max-w-2xl">
-            <div className="mb-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[#ff3b82] px-3 py-1 text-xs font-bold text-white">🔥 มาแรงอันดับ 1</span>
+              <div className="mb-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-[#ff3b82] px-3 py-1 text-xs font-bold text-white">⭐ แนะนำอันดับ 1</span>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
                 {anime.season}
               </span>
@@ -76,13 +76,13 @@ export default function Hero({ anime }: { anime: Anime }) {
                 className="inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff5a96] transition shadow-lg shadow-[#ff3b82]/20"
               >
                 <Play className="h-5 w-5 fill-white" />
-                ดูตอนที่ 1
+                ดูตัวอย่างแนะนำ
               </Link>
               <Link
                 href={`/anime/${anime.slug}`}
                 className="inline-flex items-center gap-2 rounded-full bg-white text-zinc-900 px-6 py-3 text-sm font-bold hover:bg-zinc-100 transition"
               >
-                รายละเอียด
+                อ่านรีวิวแนะนำ
               </Link>
             </div>
           </div>

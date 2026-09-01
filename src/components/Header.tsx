@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 
 const navLinks = [
   { label: "หน้าแรก", href: "/" },
-  { label: "อนิเมะ", href: "/category/ทั้งหมด" },
-  { label: "อันดับ", href: "/#trending" },
-  { label: "ตารางฉาย", href: "/#latest" },
+  { label: "แนะนำ", href: "/category/ทั้งหมด" },
+  { label: "จัดอันดับ", href: "/#trending" },
+  { label: "มาใหม่", href: "/#latest" },
 ];
 
 export default function Header() {
@@ -61,7 +61,7 @@ export default function Header() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="ค้นหาอนิเมะ..."
+                placeholder="ค้นหาอนิเมะที่อยากให้แนะนำ..."
                 className="h-9 w-full rounded-full border border-white/10 bg-white/[0.06] pl-9 pr-4 text-sm text-white placeholder:text-zinc-500 focus:border-[#ff3b82]/40 focus:bg-white/[0.08] focus:outline-none"
               />
             </div>
@@ -99,12 +99,12 @@ export default function Header() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="ค้นหาอนิเมะ..."
+                placeholder="ค้นหาอนิเมะที่อยากให้แนะนำ..."
                 className="h-10 w-full rounded-full border border-white/10 bg-white/[0.06] pl-9 pr-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ff3b82]/40"
               />
             </div>
             <button type="submit" className="rounded-full bg-[#ff3b82] px-5 text-sm font-semibold text-white">
-              ค้นหา
+              ค้นหาแนะนำ
             </button>
           </form>
           <nav className="grid grid-cols-2 gap-2">

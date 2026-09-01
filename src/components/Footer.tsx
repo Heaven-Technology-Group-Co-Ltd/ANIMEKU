@@ -16,8 +16,8 @@ export default function Footer() {
               </span>
             </div>
             <p className="max-w-md text-sm leading-6 text-zinc-400">
-              ดูอนิเมะถูกลิขสิทธิ์ พากย์ไทย ซับไทย 4K อัปเดตตอนใหม่ทุกวัน เร็วที่สุดในไทย
-              สร้างด้วย Next.js App Router + Tailwind CSS เพื่อ SEO และ Performance สูงสุด
+              แนะนำอนิเมะถูกลิขสิทธิ์ รีวิว จัดอันดับ ซับไทย พากย์ไทย คัดมาแล้วว่าเด็ดจริง อัปเดตทุกวัน
+              สร้างด้วย Next.js App Router + Tailwind CSS เพื่อ SEO และ Performance สูงสุด • โหมดแนะนำ (จากโหมดดู)
             </p>
             <div className="mt-4 flex gap-2 text-xs text-zinc-500">
               <span className="rounded-full bg-white/5 px-2.5 py-1">SEO Optimized</span>
@@ -30,9 +30,9 @@ export default function Footer() {
             <h4 className="mb-3 text-sm font-semibold text-white">เมนู</h4>
             <ul className="space-y-2 text-sm text-zinc-400">
               <li><Link href="/" className="hover:text-white">หน้าแรก</Link></li>
-              <li><Link href="/category/ทั้งหมด" className="hover:text-white">หมวดหมู่</Link></li>
-              <li><Link href="/search" className="hover:text-white">ค้นหา</Link></li>
-              <li><Link href="/#trending" className="hover:text-white">อันดับยอดนิยม</Link></li>
+              <li><Link href="/category/ทั้งหมด" className="hover:text-white">หมวดหมู่แนะนำ</Link></li>
+              <li><Link href="/search" className="hover:text-white">ค้นหาแนะนำ</Link></li>
+              <li><Link href="/#trending" className="hover:text-white">จัดอันดับแนะนำ</Link></li>
             </ul>
           </div>
 

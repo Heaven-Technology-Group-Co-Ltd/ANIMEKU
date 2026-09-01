@@ -23,9 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!anime) return {};
   const ep = anime.episodes.find((e) => e.number === Number(episode));
   return {
-    title: `${anime.titleTh} ตอนที่ ${episode} — ${ep?.titleTh ?? ""} | ANIMEKU`,
-    description: `${anime.titleTh} ตอนที่ ${episode} ${anime.description.slice(0, 110)}`,
-    openGraph: { title: `${anime.titleTh} ตอนที่ ${episode}`, images: [anime.cover] },
+    title: `แนะนำ ${anime.titleTh} — แนะนำตอนที่ ${episode} ${ep?.titleTh ?? ""} | ANIMEKU`,
+    description: `แนะนำ ${anime.titleTh} แนะนำตอนที่ ${episode} — ${anime.description.slice(0, 110)} • รีวิว จัดอันดับ ตัวอย่างแนะนำ`,
+    openGraph: { title: `แนะนำ ${anime.titleTh} แนะนำตอนที่ ${episode}`, images: [anime.cover] },
   };
 }
 
@@ -58,7 +58,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd(anime, ep, siteUrl)) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([{ name: "หน้าแรก", url: "/" }, { name: anime.titleTh, url: `/anime/${anime.slug}` }, { name: `ตอนที่ ${ep.number}`, url: `/watch/${anime.slug}/${ep.number}` }], siteUrl)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([{ name: "หน้าแรก", url: "/" }, { name: anime.titleTh, url: `/anime/${anime.slug}` }, { name: `แนะนำตอนที่ ${ep.number}`, url: `/watch/${anime.slug}/${ep.number}` }], siteUrl)) }} />
 
       {/* Theater background */}
       <div className="relative">
@@ -81,7 +81,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
             <span className="text-zinc-600">/</span>
             <span className="text-white font-semibold flex items-center gap-1.5">
               <span className="rounded bg-[#ff3b82] px-1.5 py-0.5 text-xs font-black text-white">EP.{ep.number}</span>
-              {ep.titleTh}
+              แนะนำตอนที่ {ep.number} • {ep.titleTh}
             </span>
           </div>
 
@@ -90,7 +90,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
             {/* Player column */}
             <div>
               <TrailerPlayer
-                title={`${anime.titleTh} — ตอนที่ ${ep.number} ${ep.titleTh}`}
+                title={`แนะนำ ${anime.titleTh} — แนะนำตอนที่ ${ep.number} ${ep.titleTh}`}
                 youtubeId={anime.trailerYoutubeId}
                 youtubeDubId={anime.trailerDubYoutubeId}
                 thumbnail={anime.trailerThumbnail || ep.thumbnail}
@@ -115,7 +115,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                      {anime.titleTh} <span className="text-[#ff3b82]">ตอนที่ {ep.number}</span>
+                      แนะนำ {anime.titleTh} <span className="text-[#ff3b82]">แนะนำตอนที่ {ep.number}</span>
                     </h1>
                     <p className="text-sm text-zinc-400 mt-1">{ep.titleTh} • {ep.title}</p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -152,6 +152,16 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
                   ))}
                 </div>
                 <p className="mt-4 text-sm leading-6 text-zinc-300">{anime.description}</p>
+              </div>
+
+              {/* เหตุผลที่แนะนำ */}
+              <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/[0.07] p-4">
+                <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">⭐ เหตุผลที่แนะนำเรื่องนี้</h3>
+                <ul className="mt-2 space-y-1.5 text-sm leading-6 text-zinc-300">
+                  <li>• เรตติ้ง {anime.rating.toFixed(1)}/10 • สตูดิโอ {anime.studio} • {anime.genres.slice(0, 3).join(" / ")}</li>
+                  <li>• เหมาะกับคนชอบแนว {anime.genres[0]} {anime.genres[1] ? `และ ${anime.genres[1]}` : ""} — ดูตัวอย่างแนะนำก่อนตัดสินใจ</li>
+                  <li>• แนะนำดูถูกลิขสิทธิ์ผ่านปุ่ม YouTube / Bilibili / iQIYI / Crunchyroll ด้านบน</li>
+                </ul>
               </div>
 
               {/* Episode grid (mobile) */}
