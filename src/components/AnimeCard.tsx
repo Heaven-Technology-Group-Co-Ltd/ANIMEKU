@@ -74,7 +74,7 @@ export function AnimeCard({ anime, rank }: { anime: Anime; rank?: number }) {
             <Eye className="h-3.5 w-3.5" />
             {formatViews(anime.views)}
           </span>
-          <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px]">{anime.episodesTotal} ตอน</span>
+          <span className="rounded-full bg-[#ff3b82]/15 text-[#ff8fba] border border-[#ff3b82]/20 px-2 py-0.5 text-[11px] font-bold">ตัวอย่างแนะนำ</span>
         </div>
       </div>
     </Link>

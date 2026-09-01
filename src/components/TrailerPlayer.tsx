@@ -25,7 +25,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   if (!hasYoutube && !showHlsFallback) {
     return (
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black border border-white/10 grid place-items-center">
-        <p className="text-sm text-zinc-500">ไม่มีตัวอย่างสำหรับตอนนี้</p>
+        <p className="text-sm text-zinc-500">ไม่มีตัวอย่างแนะนำสำหรับเรื่องนี้</p>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                 {mode === "sub" ? "เสียงญี่ปุ่น • ซับไทย" : "พากย์ไทย"} • คลิกเพื่อเล่น • YouTube
               </p>
               <span className="mt-3 inline-flex items-center gap-2 rounded-full bg-black/60 backdrop-blur px-3 py-1.5 text-xs text-white border border-white/10">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> EP.{episodeNumber ?? 1} • {animeSlug}
+                <span className="h-2 w-2 rounded-full bg-[#ff3b82] animate-pulse" /> ตัวอย่างแนะนำ • {animeSlug}
               </span>
             </div>
 

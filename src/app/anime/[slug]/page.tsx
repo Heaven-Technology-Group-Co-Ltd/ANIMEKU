@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getAnimeBySlug, animes } from "@/lib/data";
 import { animeJsonLd, breadcrumbJsonLd } from "@/lib/seo";
-import EpisodeList from "@/components/EpisodeList";
+import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
 
@@ -54,16 +54,15 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
               <span className="flex items-center gap-1 bg-white text-black rounded-full px-2.5 py-1 font-semibold"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{anime.rating.toFixed(1)}</span>
               <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{anime.year}</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{anime.duration}</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{anime.duration.replace(" /ตอน","").replace("/ตอน","")}</span>
               <span>{anime.studio}</span>
             </div>
-            {anime.status === "ยังไม่ฉาย" ? (
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black text-black">⏳ ยังไม่ฉาย • {anime.season}</span>
-            ) : (
-              <Link href={`/watch/${anime.slug}/1`} className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#ff5a96]">
+            <div className="mt-4 flex flex-wrap gap-2">
+              {anime.status === "ยังไม่ฉาย" && <span className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-6 py-2.5 text-sm font-black text-black">⏳ ยังไม่ฉาย • {anime.season}</span>}
+              <Link href={`/watch/${anime.slug}/1`} className="inline-flex items-center gap-2 rounded-full bg-[#ff3b82] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#ff5a96]">
                 <Play className="h-4 w-4 fill-white" /> ดูตัวอย่างแนะนำ
               </Link>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -74,18 +73,30 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
           <span className={`rounded-full px-3 py-1.5 font-bold ${anime.status==="ยังไม่ฉาย" ? "bg-amber-500 text-black" : anime.status==="กำลังฉาย" ? "bg-[#22c55e] text-white" : "bg-zinc-700 text-white"}`}>{anime.status}</span>
           <span className="rounded-full bg-white/10 border border-white/10 px-3 py-1.5 text-zinc-300">{anime.season} • {anime.year}</span>
         </div>
-        {anime.status === "ยังไม่ฉาย" ? (
-          <div className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-6 text-center">
-            <p className="text-amber-300 font-bold">⏳ เรื่องนี้ยังไม่ฉาย</p>
-            <p className="text-sm text-zinc-400 mt-1">ตัวอย่าง Trailer ดูได้แล้ว • ตอนเต็มจะมา {anime.season}</p>
-            <Link href={`/watch/${anime.slug}/1`} className="mt-3 inline-flex rounded-full bg-white text-black px-5 py-2 text-sm font-bold">ดูตัวอย่างแนะนำ</Link>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-[#12121a] p-4 sm:p-5">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-black text-white"><span className="rounded-full bg-[#ff3b82] px-2 py-0.5 text-xs">▶</span> ตัวอย่างแนะนำ — กดดูได้เลย</h2>
+          <TrailerPlayer
+            title={`แนะนำ ${anime.titleTh} — ตัวอย่างแนะนำ`}
+            youtubeId={anime.trailerYoutubeId}
+            youtubeDubId={anime.trailerDubYoutubeId}
+            thumbnail={anime.trailerThumbnail || anime.cover}
+            animeSlug={anime.slug}
+          />
+          <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.07] p-4">
+            <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">⭐ เหตุผลที่แนะนำเรื่องนี้</h3>
+            <ul className="mt-2 space-y-1.5 text-sm leading-6 text-zinc-300">
+              <li>• เรตติ้ง {anime.rating.toFixed(1)}/10 • สตูดิโอ {anime.studio} • {anime.genres.slice(0, 3).join(" / ")}</li>
+              <li>• เหมาะกับคนชอบแนว {anime.genres[0]}{anime.genres[1] ? ` และ ${anime.genres[1]}` : ""} — ดูตัวอย่างก่อนตัดสินใจ</li>
+            </ul>
           </div>
-        ) : (
-          <>
-            <h2 className="mt-8 mb-4 text-lg font-bold text-white">ตอนทั้งหมด • {anime.episodesTotal} ตอน</h2>
-            <EpisodeList anime={anime} />
-          </>
-        )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="text-xs text-zinc-500 py-2 flex items-center gap-1">ดูถูกลิขสิทธิ์:</span>
+            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(anime.titleEn + " ซับไทย")}`} target="_blank" rel="noopener" className="rounded-full bg-white text-black px-4 py-2 text-xs font-bold hover:bg-zinc-100">YouTube</a>
+            <a href={`https://www.bilibili.tv/search?q=${encodeURIComponent(anime.titleTh)}`} target="_blank" rel="noopener" className="rounded-full bg-[#00a1d6] text-white px-4 py-2 text-xs font-bold">Bilibili</a>
+            <a href={`https://www.iq.com/search?query=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#1cc749] text-white px-4 py-2 text-xs font-bold">iQIYI</a>
+            <a href={`https://www.crunchyroll.com/search?q=${encodeURIComponent(anime.titleEn)}`} target="_blank" rel="noopener" className="rounded-full bg-[#f47521] text-white px-4 py-2 text-xs font-bold">Crunchyroll</a>
+          </div>
+        </div>
         <h2 className="mt-10 mb-4 text-lg font-bold text-white">เรื่องที่คล้ายกัน</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           {animes.filter((a) => a.id !== anime.id).slice(0, 6).map((a) => (
