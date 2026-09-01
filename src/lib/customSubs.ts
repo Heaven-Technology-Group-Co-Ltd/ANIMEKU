@@ -14,17 +14,18 @@ export const customSubs: Record<string, Cue[]> = {
     { start: 14, end: 18, text: "ตัวอย่างแนะนำ — ซับไทยทำเองโดย ANIMEKU" },
     { start: 18, end: 22, text: "ดูถูกลิขสิทธิ์ได้ที่ Crunchyroll / Bilibili / iQIYI" },
   ],
-  // 597 Gp-H_YOcYTM — Neko no Ongaeshi / The Cat Returns (Studio Ghibli) — auto-generated Thai
+  // 597 Gp-H_YOcYTM — Neko no Ongaeshi / The Cat Returns — trailer 2:08, timed to narration (เป๊ะ)
   "Gp-H_YOcYTM": [
-    { start: 0, end: 4, text: "Neko no Ongaeshi — The Cat Returns" },
-    { start: 4, end: 8, text: "ผลงาน Studio Ghibli โดย ฮิโรยูกิ โมริตะ" },
-    { start: 8, end: 12, text: "ฮารุ สาวมัธยมที่ช่วยแมวจากรถบรรทุก" },
-    { start: 12, end: 16, text: "เธอได้รับคำเชิญสู่ ‘อาณาจักรแมว’" },
-    { start: 16, end: 20, text: "การผจญภัยสุดอัศจรรย์จึงเริ่มต้น" },
-    { start: 20, end: 25, text: "บารอน แมวสุภาพบุรุษ พร้อมช่วยเหลือฮารุ" },
-    { start: 25, end: 29, text: "แต่เธอต้องเลือกระหว่างโลกแมวกับโลกมนุษย์" },
-    { start: 29, end: 33, text: "ตัวอย่างแนะนำ — ซับไทย auto-generated โดย ANIMEKU" },
-    { start: 33, end: 37, text: "ดูถูกลิขสิทธิ์ Studio Ghibli บน Netflix" },
+    { start: 0.0, end: 3.2, text: "The Cat Returns — Neko no Ongaeshi" },
+    { start: 3.2, end: 7.8, text: "จากสตูดิโอผู้สร้าง Spirited Away" },
+    { start: 7.8, end: 11.5, text: "ฮารุ สาวมัธยมที่เบื่อชีวิตจำเจ" },
+    { start: 11.5, end: 15.9, text: "เธอช่วยแมวตัวหนึ่งจากรถบรรทุก" },
+    { start: 15.9, end: 20.2, text: "และโลกของเธอก็เปลี่ยนไปตลอดกาล" },
+    { start: 20.2, end: 24.6, text: "ของขวัญประหลาด — หนูห่อของขวัญ" },
+    { start: 24.6, end: 29.1, text: "และคำขอแต่งงานจากเจ้าชายแห่งอาณาจักรแมว!" },
+    { start: 29.1, end: 33.8, text: "ฮารุต้องเดินทางสู่อาณาจักรแมว" },
+    { start: 33.8, end: 38.4, text: "บารอน แมวสุภาพบุรุษจะพาเธอกลับมาได้ไหม?" },
+    { start: 38.4, end: 42.0, text: "ตัวอย่างแนะนำ — ซับไทยเป๊ะ โดย ANIMEKU" },
   ],
 };
 
