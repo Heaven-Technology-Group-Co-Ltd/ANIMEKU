@@ -1,69 +1,65 @@
+import { getFeatured, getTrending, getLatestEpisodes, animes } from "@/lib/data";
+import Hero from "@/components/Hero";
+import { AnimeCard } from "@/components/AnimeCard";
+import Section from "@/components/Section";
+import CategoryPills from "@/components/CategoryPills";
 import Image from "next/image";
+import Link from "next/link";
+import { Clock, Eye } from "lucide-react";
+import { formatViews } from "@/lib/utils";
 
 export default function Home() {
+  const featured = getFeatured()[0] ?? animes[0];
+  const trending = getTrending().slice(0, 8);
+  const latest = getLatestEpisodes();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <Hero anime={featured} />
+
+      <Section id="category" title="หมวดหมู่ยอดนิยม" subtitle="เลือกแนวที่ชอบ แล้วดูได้ทันที">
+        <CategoryPills />
+      </Section>
+
+      <Section id="trending" title="🔥 มาแรงประจำสัปดาห์" subtitle="อันดับจากยอดดูจริง" href="/category/ทั้งหมด">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {trending.map((a, i) => (
+            <AnimeCard key={a.id} anime={a} rank={i + 1} />
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </Section>
+
+      <Section id="latest" title="ตอนใหม่ล่าสุด" subtitle="อัปเดตทุกวัน เร็วที่สุด">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {latest.map((ep) => (
+            <Link
+              key={`${ep.anime.slug}-${ep.number}`}
+              href={`/watch/${ep.anime.slug}/${ep.number}`}
+              className="flex gap-3 rounded-2xl border border-white/[0.06] bg-[#12121a] p-2.5 hover:bg-[#1a1a24] transition"
+            >
+              <div className="relative h-[72px] w-[128px] shrink-0 overflow-hidden rounded-xl bg-zinc-900">
+                <Image src={ep.thumbnail} alt={ep.titleTh} fill className="object-cover" sizes="128px" />
+                <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[11px] text-white">{ep.duration}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-1 text-sm font-semibold text-white">{ep.anime.titleTh}</p>
+                <p className="line-clamp-1 text-xs text-zinc-500">ตอนที่ {ep.number} • {ep.titleTh}</p>
+                <p className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
+                  <Clock className="h-3 w-3" /> {ep.updatedAt} <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{formatViews(ep.views)}</span>
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
-      </main>
-    </div>
+      </Section>
+
+      <Section title="อนิเมะทั้งหมด" href="/category/ทั้งหมด">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+          {animes.map((a) => (
+            <AnimeCard key={a.id} anime={a} />
+          ))}
+        </div>
+      </Section>
+    </>
   );
 }
