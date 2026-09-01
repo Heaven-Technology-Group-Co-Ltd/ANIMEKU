@@ -75,7 +75,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     return `${m}:${sec}`;
   };
 
-  // Fetch caption tracks for active video (all languages)
+  // Fetch caption tracks for active video (all languages) — server first, then supplement from YT player (bypass AWS IP block)
   useEffect(() => {
     if (!activeId) {
       setCaptionTracks([]);
@@ -87,24 +87,49 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
       .then((j) => {
         if (cancelled) return;
         const tracks = (j.tracks || []) as { lang: string; name: string; isAuto: boolean }[];
-        setCaptionTracks(tracks);
-        // auto-select Thai if exists, else English, else first
         if (tracks.length > 0) {
+          setCaptionTracks(tracks);
           const hasTh = tracks.find((t) => t.lang === "th");
           const hasEn = tracks.find((t) => t.lang === "en");
           const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
           setSelectedCaption(pick);
         } else {
-          setSelectedCaption("");
+          // server got 0 (likely AWS IP blocked) — keep empty, will supplement from YT player after play
+          if (!playing) setCaptionTracks([]);
         }
       })
       .catch(() => {
-        if (!cancelled) setCaptionTracks([]);
+        if (!cancelled && !playing) setCaptionTracks([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [activeId]);
+  }, [activeId, playing]);
+
+  // Supplement caption tracks directly from YT IFrame player (uses viewer's IP, not AWS)
+  const syncTracksFromPlayer = useCallback(() => {
+    const p = playerRef.current;
+    if (!p || typeof p.getOption !== "function") return;
+    try {
+      const list = p.getOption("captions", "tracklist") as any[];
+      if (Array.isArray(list) && list.length > 0) {
+        const tracks = list.map((t: any) => ({
+          lang: t.languageCode as string,
+          name: (t.displayName as string) || (t.languageCode as string),
+          isAuto: (t.kind as string) === "asr",
+        }));
+        // Only replace if we had 0 or list is richer
+        setCaptionTracks((prev) => (prev.length === 0 || tracks.length > prev.length ? tracks : prev));
+        // auto-pick if nothing selected
+        setSelectedCaption((prev) => {
+          if (prev) return prev;
+          const hasTh = tracks.find((t) => t.lang === "th");
+          const hasEn = tracks.find((t) => t.lang === "en");
+          return hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
+        });
+      }
+    } catch {}
+  }, []);
 
   // Load API when entering playing state
   useEffect(() => {
@@ -156,7 +181,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             setDuration(e.target.getDuration?.() || 0);
             e.target.setVolume(volume);
             if (muted) e.target.mute();
-            // enable captions module and set language
+            // enable captions module and set language + sync tracklist from player
             try {
               e.target.loadModule?.("captions");
               if (selectedCaption) {
@@ -165,6 +190,9 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             } catch {}
             e.target.playVideo();
             setIsPlaying(true);
+            // YT tracklist available after a short delay
+            setTimeout(() => syncTracksFromPlayer(), 800);
+            setTimeout(() => syncTracksFromPlayer(), 2000);
           },
           onStateChange: (e: any) => {
             // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
@@ -453,7 +481,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                       {showCaptionMenu && (
                         <div className="absolute bottom-full right-0 mb-2 w-56 rounded-2xl border border-white/10 bg-[#12121a] p-2 shadow-2xl z-10">
                           <p className="px-2 py-1 text-xs font-bold text-white flex items-center gap-1.5"><Subtitles className="h-3.5 w-3.5" /> ซับจากคลิปจริง • {captionTracks.length} ภาษา</p>
-                          <p className="px-2 text-[11px] text-zinc-500">ดึงจาก YouTube timedtext • แตะเพื่อสลับทันที</p>
+                          <p className="px-2 text-[11px] text-zinc-500">ดึงจากคลิปจริง (player) + API • แตะเพื่อสลับทันที</p>
                           <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                             <button
                               onClick={() => {
@@ -477,7 +505,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                                 {selectedCaption === t.lang && <Check className="h-3.5 w-3.5" />}
                               </button>
                             ))}
-                            {captionTracks.length === 0 && <p className="px-3 py-2 text-xs text-zinc-500">คลิปนี้ไม่มีซับฝัง • ใช้ซับ Auto ของ YouTube ได้</p>}
+                            {captionTracks.length === 0 && <p className="px-3 py-2 text-xs text-zinc-500">ยังไม่พบซับแยก (CC) — คลิปนี้อาจมีซับฝังในภาพ (burn-in) ดูได้เลย หรือรอโหลดหลังกดเล่น 1-2 วิ</p>}
                           </div>
                         </div>
                       )}
