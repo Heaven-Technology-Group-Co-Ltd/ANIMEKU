@@ -246,7 +246,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     } catch {}
   }, [selectedCaption, useCustomSub, playing, isYTReady]);
 
-  // Poll time
+  // Poll time — ใช้ Timestamp ของ YouTube เป็นตัวตั้ง (ตรงสุด ไม่ดริฟท์)
   useEffect(() => {
     if (!playing || !isYTReady) return;
     if (timerRef.current) window.clearInterval(timerRef.current);
@@ -259,7 +259,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         if (!isNaN(c)) setCurrent(c);
         if (!isNaN(d) && d > 0) setDuration(d);
       } catch {}
-    }, 500) as unknown as number;
+    }, 200) as unknown as number; // 200ms = ตรงกว่า 500ms/1000ms
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
