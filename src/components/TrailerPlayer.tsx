@@ -54,7 +54,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
-  const playerContainerId = useRef(`yt-player-${Math.random().toString(36).slice(2, 8)}`);
+  const playerContainerId = useRef(`yt-player-${animeSlug}`);
   const timerRef = useRef<number | null>(null);
 
   const activeId = mode === "dub" && youtubeDubId ? youtubeDubId : youtubeId;
