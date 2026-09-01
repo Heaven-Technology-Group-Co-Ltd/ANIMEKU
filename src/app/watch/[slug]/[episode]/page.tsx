@@ -3,11 +3,24 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getAnimeBySlug, animes } from "@/lib/data";
+import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
 import { videoJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Eye, Sparkles } from "lucide-react";
 import { formatViews } from "@/lib/utils";
+
+async function resolveAnime(slug: string) {
+  const local = getAnimeBySlug(slug);
+  if (local) return local;
+  const id = Number(slug.split("-")[0]);
+  if (isNaN(id) || id <= 0) return null;
+  try {
+    const ani = await getAnimeByIdAni(id);
+    if (ani) return toAnime(ani);
+  } catch {}
+  return null;
+}
 
 export async function generateStaticParams() {
   // โหมดแนะนำ: มีแค่ตัวอย่างเดียวต่อเรื่อง ไม่ต้องมีหลายตอน
@@ -16,7 +29,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; episode: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const anime = getAnimeBySlug(slug);
+  const anime = await resolveAnime(slug);
   if (!anime) return {};
   return {
     title: `แนะนำ ${anime.titleTh} — ดูตัวอย่างแนะนำ | ANIMEKU`,
@@ -27,7 +40,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function WatchPage({ params }: { params: Promise<{ slug: string; episode: string }> }) {
   const { slug } = await params;
-  const anime = getAnimeBySlug(slug);
+  const anime = await resolveAnime(slug);
   if (!anime) notFound();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234";
   const related = animes.filter((a) => a.id !== anime.id).slice(0, 4);

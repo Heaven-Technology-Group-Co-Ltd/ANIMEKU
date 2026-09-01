@@ -3,10 +3,23 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getAnimeBySlug, animes } from "@/lib/data";
+import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
 import { animeJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
+
+async function resolveAnime(slug: string) {
+  const local = getAnimeBySlug(slug);
+  if (local) return local;
+  const id = Number(slug.split("-")[0]);
+  if (isNaN(id) || id <= 0) return null;
+  try {
+    const ani = await getAnimeByIdAni(id);
+    if (ani) return toAnime(ani);
+  } catch {}
+  return null;
+}
 
 export async function generateStaticParams() {
   return animes.map((a) => ({ slug: a.slug }));
@@ -14,7 +27,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const anime = getAnimeBySlug(slug);
+  const anime = await resolveAnime(slug);
   if (!anime) return {};
   return {
     title: `แนะนำ ${anime.titleTh} — รีวิว จัดอันดับ ดูตัวอย่างแนะนำ | ANIMEKU`,
@@ -25,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function AnimePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const anime = getAnimeBySlug(slug);
+  const anime = await resolveAnime(slug);
   if (!anime) notFound();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234";
 
