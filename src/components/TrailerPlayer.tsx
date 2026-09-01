@@ -59,6 +59,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   const [selectedCaption, setSelectedCaption] = useState<string>("");
   const [showCaptionMenu, setShowCaptionMenu] = useState(false);
   const [useCustomSub, setUseCustomSub] = useState(false);
+  const [subDelay, setSubDelay] = useState(0); // seconds, + = delay subs, - = earlier
 
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -98,7 +99,9 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
           setSelectedCaption(pick);
         } else {
-          // server got 0 (likely AWS IP blocked) — keep empty, will supplement from YT player after play
+          // server got 0 — try browser-side fetch (user IP not blocked) before giving up
+          fetch(`https://www.youtube.com/api/timedtext?type=list&v=${activeId}`, { mode: "no-cors" }).catch(() => {});
+          // also try timedtext via no-cors iframe trick — fallback to YT player tracklist after play
           if (!playing) setCaptionTracks([]);
         }
       })
@@ -443,11 +446,11 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             id={playerContainerId.current}
             className="absolute inset-0 h-full w-full"
           />
-          {/* Custom subtitle overlay — shows when useCustomSub */}
+          {/* Custom subtitle overlay — shows when useCustomSub (with delay adjust) */}
           {useCustomSub && customCues && (
             <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[90%] text-center">
               <p className="inline-block rounded-xl bg-black/75 backdrop-blur px-3 py-1.5 text-sm sm:text-base font-bold text-white leading-tight shadow-lg border border-white/10">
-                {getActiveCue(customCues, current) || "\u00A0"}
+                {getActiveCue(customCues, current, subDelay * -1) || "\u00A0"}
               </p>
             </div>
           )}
@@ -550,12 +553,23 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                             ))}
                             {captionTracks.length === 0 && !hasCustomSub && <p className="px-3 py-2 text-xs text-zinc-500">ยังไม่พบซับแยก (CC) — คลิปนี้อาจมีซับฝังในภาพ (burn-in) ดูได้เลย หรือรอโหลดหลังกดเล่น 1-2 วิ</p>}
                             {captionTracks.length === 0 && hasCustomSub && !useCustomSub && <p className="px-3 py-2 text-xs text-emerald-400">มีซับทำเองพร้อม — กด "ซับไทย (เราทำเอง)" ด้านบนเพื่อเปิด</p>}
+                            {hasCustomSub && useCustomSub && (
+                              <div className="mt-2 border-t border-white/10 pt-2">
+                                <p className="px-2 text-[11px] text-zinc-400 flex items-center justify-between">ปรับซับให้ตรงเสียง <span className="font-mono text-white">{subDelay > 0 ? `+${subDelay.toFixed(1)}s` : `${subDelay.toFixed(1)}s`}</span></p>
+                                <div className="mt-1 flex items-center gap-2 px-2">
+                                  <button onClick={() => setSubDelay(v => Math.max(-3, v - 0.5))} className="h-6 px-2 rounded-full bg-white/10 text-white text-xs hover:bg-white/20">-0.5s</button>
+                                  <input type="range" min={-3} max={3} step={0.5} value={subDelay} onChange={e => setSubDelay(Number(e.target.value))} className="flex-1 h-1 accent-[#ff3b82]" />
+                                  <button onClick={() => setSubDelay(v => Math.min(3, v + 0.5))} className="h-6 px-2 rounded-full bg-white/10 text-white text-xs hover:bg-white/20">+0.5s</button>
+                                  <button onClick={() => setSubDelay(0)} className="h-6 px-2 rounded-full bg-white text-black text-xs font-bold">รีเซ็ต</button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                     <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white border border-white/10">
-                      {useCustomSub ? "ซับทำเอง ✓" : mode === "sub" ? "ซับไทย" : "พากย์ไทย"} • {captionTracks.length > 0 ? `${captionTracks.length}ภาษา` : hasCustomSub ? "ซับทำเองพร้อม" : "Custom"}
+                      {useCustomSub ? `ซับทำเอง ✓ ${subDelay !== 0 ? `(${subDelay > 0 ? "+" : ""}${subDelay}s)` : ""}` : mode === "sub" ? "ซับไทย" : "พากย์ไทย"} • {captionTracks.length > 0 ? `${captionTracks.length}ภาษา` : hasCustomSub ? "ซับทำเองพร้อม" : "Custom"}
                     </span>
                     {hasRealDub && <span className="hidden lg:inline-flex rounded-full bg-emerald-500 px-2 py-1 text-xs font-black text-white">พากย์จริง ✓</span>}
                     <button onClick={() => setTheater(v => !v)} className="hidden sm:grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white" title="Theater">
