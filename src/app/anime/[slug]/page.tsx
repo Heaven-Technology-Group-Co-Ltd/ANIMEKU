@@ -9,6 +9,7 @@ import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
 import LegalPlatforms from "@/components/LegalPlatforms";
+import { getSiteUrl } from "@/lib/env";
 
 async function resolveAnime(slug: string) {
   const local = getAnimeBySlug(slug);
@@ -18,7 +19,9 @@ async function resolveAnime(slug: string) {
   try {
     const ani = await getAnimeByIdAni(id);
     if (ani) return toAnime(ani);
-  } catch {}
+  } catch (err) {
+    console.error(`[anime] AniList fallback failed for slug="${slug}"`, err);
+  }
   return null;
 }
 
@@ -41,7 +44,7 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const anime = await resolveAnime(slug);
   if (!anime) notFound();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234";
+  const siteUrl = getSiteUrl();
 
   return (
     <>

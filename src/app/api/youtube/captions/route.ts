@@ -49,7 +49,9 @@ export async function GET(req: NextRequest) {
       if (xml.includes("<transcript_list")) {
         return NextResponse.json({ videoId: v, tracks: [], source: url });
       }
-    } catch {}
+    } catch (err) {
+      console.error(`[captions] fetch failed for ${url} v=${v}`, err);
+    }
   }
 
   // Fallback: try to scrape watch page for captionTracks JSON
@@ -79,7 +81,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ videoId: v, tracks, source: "watch page" });
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error(`[captions] watch page scrape failed for v=${v}`, err);
+  }
 
   return NextResponse.json({ videoId: v, tracks: [], source: "none" });
 }

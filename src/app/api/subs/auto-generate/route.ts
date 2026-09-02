@@ -13,18 +13,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid videoId" }, { status: 400 });
   }
 
-  // Try to get anime info for context
+  // Try to get anime info for context (validate animeId is numeric)
   let title = vid;
   let desc = "";
-  if (animeId) {
+  if (animeId !== undefined && animeId !== null && String(animeId).trim() !== "") {
+    const numId = Number(animeId);
+    if (!Number.isFinite(numId) || numId <= 0) {
+      return NextResponse.json({ error: "invalid animeId" }, { status: 400 });
+    }
     try {
-      const ani = await getAnimeByIdAni(Number(animeId));
+      const ani = await getAnimeByIdAni(numId);
       if (ani) {
         const a = toAnime(ani);
         title = a.titleTh || a.titleEn;
         desc = a.description.slice(0, 120);
       }
-    } catch {}
+    } catch (err) {
+      console.error(`[subs/auto-generate] AniList lookup failed for animeId=${animeId}`, err);
+    }
   }
 
   // Generate timed cues (approx 30s trailer, 4s per cue)
