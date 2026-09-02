@@ -39,7 +39,7 @@ export default function Footer() {
           <div>
             <h4 className="mb-3 text-sm font-semibold text-white">ช่วยเหลือ</h4>
             <ul className="space-y-2 text-sm text-zinc-400">
-              <li>© 2026 ANIMEKU</li>
+              <li>© 2026 ANIMEKU — Heaven Technology Group Co., Ltd.</li>
               <li>นโยบายความเป็นส่วนตัว</li>
               <li>เงื่อนไขการใช้งาน</li>
               <li className="text-zinc-500">Docker Port: 1234 • Next.js 16</li>
@@ -48,7 +48,8 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 border-t border-white/5 pt-6 text-center text-xs text-zinc-500">
-          สร้างเพื่อการศึกษา — ใช้รูปจาก Unsplash/Picsum เป็นตัวอย่างเท่านั้น
+          <p>สร้างเพื่อการศึกษา — ใช้รูปจาก Unsplash/Picsum เป็นตัวอย่างเท่านั้น</p>
+          <p className="mt-1">© 2026 Heaven Technology Group Co., Ltd. All rights reserved.</p>
         </div>
       </div>
     </footer>
