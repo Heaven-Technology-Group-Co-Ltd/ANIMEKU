@@ -1,0 +1,1 @@
+export { animes } from "./animes";
