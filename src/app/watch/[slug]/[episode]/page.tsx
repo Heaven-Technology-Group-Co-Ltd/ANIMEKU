@@ -61,7 +61,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd(anime, ep as any, siteUrl)) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd(anime, { number: ep.number, titleTh: ep.titleTh, thumbnail: ep.thumbnail }, siteUrl)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd([{ name: "หน้าแรก", url: "/" }, { name: anime.titleTh, url: `/anime/${anime.slug}` }, { name: `ตัวอย่างแนะนำ`, url: `/watch/${anime.slug}/1` }], siteUrl)) }} />
 
       <div className="relative">

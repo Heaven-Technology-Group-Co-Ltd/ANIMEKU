@@ -62,8 +62,14 @@ export async function GET(req: NextRequest) {
       const html = await watchRes.text();
       const capMatch = html.match(/"captionTracks":(\[.*?\])/);
       if (capMatch) {
-        const arr = JSON.parse(capMatch[1]);
-        const tracks = arr.map((c: any) => ({
+        type CaptionTrack = {
+          languageCode?: string;
+          name?: { simpleText?: string };
+          kind?: string;
+          baseUrl?: string;
+        };
+        const arr = JSON.parse(capMatch[1]) as CaptionTrack[];
+        const tracks = arr.map((c) => ({
           lang: c.languageCode,
           name: c.name?.simpleText || c.languageCode,
           kind: c.kind || "",

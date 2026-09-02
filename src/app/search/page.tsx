@@ -8,7 +8,7 @@ export const revalidate = 3600;
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
-  let results = query ? searchAnimes(query) : [];
+  const results = query ? [...searchAnimes(query)] : [];
   let liveResults: ReturnType<typeof toAnime>[] = [];
 
   if (query) {
