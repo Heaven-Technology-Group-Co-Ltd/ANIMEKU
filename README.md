@@ -1,6 +1,6 @@
 # ANIMEKU
 
-> Modern anime streaming platform built and maintained by **Heaven Technology Group**.
+> Modern anime streaming platform built and maintained by **Heaven Technology Group Co., Ltd.**
 
 [![CI](https://github.com/Heaven-Technology-Group/ANIMEKU/actions/workflows/ci.yml/badge.svg)](https://github.com/Heaven-Technology-Group/ANIMEKU/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js-16.x-black?logo=next.js)](https://nextjs.org/)
@@ -16,11 +16,11 @@
 
 The project is developed under:
 
-**Heaven Technology Group**  
-└── **Heaven Technologies**  
+**Heaven Technology Group Co., Ltd.**
+└── **Heaven Technologies** *(engineering division)*
 &emsp;└── **ANIMEKU**
 
-The repository follows a professional Git-based workflow with protected `main`, pull requests, code review, and automated CI validation.
+The repository follows a professional Git-based workflow with a protected `main` branch, pull requests, code review, and automated CI validation.
 
 ## Key Features
 
@@ -94,7 +94,7 @@ npm ci
 
 Create a local `.env` file for any environment-specific configuration required by the project.
 
-Do not commit secrets, API keys, or private credentials to Git.
+> **Never commit secrets, API keys, or private credentials to Git.**
 
 ### Development
 
@@ -117,9 +117,7 @@ npm run lint
 npm run build
 ```
 
-Both checks must pass before code is considered ready for merge.
-
-The repository also runs these checks automatically through GitHub Actions on pushes to `main` and on pull requests targeting `main`.
+Both checks must pass before code is considered ready for merge. The repository also runs these checks automatically through GitHub Actions on pushes to `main` and on pull requests targeting `main`.
 
 ## Git Workflow
 
@@ -183,13 +181,13 @@ A pull request should only be merged after the required checks have passed.
 
 ## Repository
 
-**GitHub:**  
+**GitHub:**
 https://github.com/Heaven-Technology-Group/ANIMEKU
 
 ## Organization
 
-**Heaven Technology Group**  
-Team: **Heaven Technologies**
+**Heaven Technology Group Co., Ltd.**
+Division: **Heaven Technologies**
 
 The project is maintained as part of the group's software engineering and product development initiatives.
 
@@ -218,9 +216,9 @@ ANIMEKU aims to follow these principles:
 
 This project does not currently declare a public open-source license.
 
-Unless a separate license is provided, the repository and its contents should be treated as **all rights reserved** by the project owner.
+Unless a separate license is provided, the repository and its contents should be treated as **all rights reserved** by **Heaven Technology Group Co., Ltd.**
 
 ---
 
-**ANIMEKU**  
-A project by **Heaven Technology Group**
+**ANIMEKU**
+A project by **Heaven Technology Group Co., Ltd.**
