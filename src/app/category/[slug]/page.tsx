@@ -36,7 +36,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   let liveCount = 0;
   let extra: ReturnType<typeof toAnime>[] = [];
 
-  // ดึงสดจาก AniList ตาม genre (ยกเว้น ทั้งหมด)
+  // ดึงสดจาก AniList ตาม genre (ยกเว้น ทั้งหมด) — graceful degrade
   const enGenre = thaiToEn[cat];
   if (enGenre) {
     try {
@@ -47,7 +47,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
         .filter((a) => !localIds.has(a.id) && !localList.find((l) => l.slug === a.slug))
         .slice(0, 12);
       liveCount = live.length;
-    } catch {}
+    } catch (err) {
+      console.error(`[category] AniList getTopAnime failed for genre="${enGenre}"`, err);
+    }
   }
 
   const list = [...localList, ...extra];

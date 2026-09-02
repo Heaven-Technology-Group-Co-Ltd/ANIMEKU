@@ -10,6 +10,7 @@ import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Eye } from "lucide-react";
 import { formatViews } from "@/lib/utils";
 import LegalPlatforms from "@/components/LegalPlatforms";
+import { getSiteUrl } from "@/lib/env";
 
 async function resolveAnime(slug: string) {
   const local = getAnimeBySlug(slug);
@@ -19,7 +20,9 @@ async function resolveAnime(slug: string) {
   try {
     const ani = await getAnimeByIdAni(id);
     if (ani) return toAnime(ani);
-  } catch {}
+  } catch (err) {
+    console.error(`[watch] AniList fallback failed for slug="${slug}"`, err);
+  }
   return null;
 }
 
@@ -40,10 +43,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function WatchPage({ params }: { params: Promise<{ slug: string; episode: string }> }) {
-  const { slug } = await params;
+  const { slug, episode } = await params;
+  // Only trailer episode 1 is supported — unsupported episodes 2..5 must 404 (P0-1 + P0-4)
+  if (episode !== "1") notFound();
   const anime = await resolveAnime(slug);
   if (!anime) notFound();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234";
+  const siteUrl = getSiteUrl();
   const related = animes.filter((a) => a.id !== anime.id).slice(0, 4);
 
   // สร้าง ep จำลองสำหรับ Trailer โดยเฉพาะ

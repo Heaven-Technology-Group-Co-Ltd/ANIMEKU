@@ -22,7 +22,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           results.push(lr);
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error(`[search] AniList searchAnilist failed for q="${query}"`, err);
+    }
   }
 
   const isLive = liveResults.length > 0;

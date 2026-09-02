@@ -3,6 +3,7 @@ import { Kanit, Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { getSiteUrl } from "@/lib/env";
 
 const kanit = Kanit({
   subsets: ["thai", "latin"],
@@ -19,7 +20,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:1234"),
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์ รีวิว จัดอันดับ ซับไทย พากย์ไทย",
     template: "%s | ANIMEKU",
