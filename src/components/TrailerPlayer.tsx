@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Share2, Bookmark, Subtitles, Check } from "lucide-react";
+import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Share2, Bookmark, Subtitles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCustomSubs, getActiveCue, type Cue } from "@/lib/customSubs";
+import { getCustomSubs, getActiveCue } from "@/lib/customSubs";
 
 type Props = {
   title: string;
@@ -16,29 +16,46 @@ type Props = {
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     YT: any;
     onYouTubeIframeAPIReady: () => void;
   }
 }
 
+// Singleton promise for YT IFrame API — prevents duplicate script tags
+let ytApiPromise: Promise<void> | null = null;
+
 function loadYouTubeAPI(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
   if (window.YT && window.YT.Player) return Promise.resolve();
-  if (document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-    return new Promise((res) => {
-      const orig = window.onYouTubeIframeAPIReady;
+  if (ytApiPromise) return ytApiPromise;
+
+  const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+  if (existingScript) {
+    // Script already inserted by another instance — wait for ready
+    ytApiPromise = new Promise((res) => {
+      const prev = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
-        orig?.();
+        prev?.();
         res();
       };
+      // If YT already ready after script load, resolve immediately
+      if (window.YT?.Player) res();
     });
+    return ytApiPromise;
   }
-  return new Promise((res) => {
+
+  ytApiPromise = new Promise((res) => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => res();
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      prev?.();
+      res();
+    };
   });
+  return ytApiPromise;
 }
 
 export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnail, animeSlug, hlsUrl }: Props) {
@@ -59,12 +76,14 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   const [selectedCaption, setSelectedCaption] = useState<string>("");
   const [showCaptionMenu, setShowCaptionMenu] = useState(false);
   const [useCustomSub, setUseCustomSub] = useState(false);
-  const [subDelay, setSubDelay] = useState(0); // seconds, + = delay subs, - = earlier
+  const [subDelay, setSubDelay] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
-  const playerContainerId = useRef(`yt-player-${animeSlug}`);
+  const playerRef = useRef<unknown>(null);
+  const playerContainerId = `yt-player-${animeSlug}`;
   const timerRef = useRef<number | null>(null);
+  const timeoutsRef = useRef<number[]>([]);
+  const mountedRef = useRef(true);
 
   const activeId = mode === "dub" && youtubeDubClean ? youtubeDubClean : youtubeIdClean;
   const hasYoutube = !!activeId;
@@ -80,7 +99,38 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     return `${m}:${sec}`;
   };
 
-  // Fetch caption tracks for active video (all languages) — server first, then supplement from YT player (bypass AWS IP block)
+  const clearTimeouts = useCallback(() => {
+    timeoutsRef.current.forEach((id) => window.clearTimeout(id));
+    timeoutsRef.current = [];
+  }, []);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const destroyPlayer = useCallback(() => {
+    clearTimer();
+    clearTimeouts();
+    const p = playerRef.current as { destroy?: () => void } | null;
+    if (p?.destroy) {
+      try { p.destroy(); } catch {}
+    }
+    playerRef.current = null;
+  }, [clearTimer, clearTimeouts]);
+
+  // Track mounted to guard async setState
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      destroyPlayer();
+    };
+  }, [destroyPlayer]);
+
+  // Fetch caption tracks for active video
   useEffect(() => {
     if (!activeId) {
       setCaptionTracks([]);
@@ -90,7 +140,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     fetch(`/api/youtube/captions?v=${activeId}`)
       .then((r) => r.json())
       .then((j) => {
-        if (cancelled) return;
+        if (cancelled || !mountedRef.current) return;
         const tracks = (j.tracks || []) as { lang: string; name: string; isAuto: boolean }[];
         if (tracks.length > 0) {
           setCaptionTracks(tracks);
@@ -99,42 +149,38 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
           setSelectedCaption(pick);
         } else {
-          // server got 0 — try browser-side fetch (user IP not blocked) before giving up
           fetch(`https://www.youtube.com/api/timedtext?type=list&v=${activeId}`, { mode: "no-cors" }).catch(() => {});
-          // also try timedtext via no-cors iframe trick — fallback to YT player tracklist after play
           if (!playing) setCaptionTracks([]);
         }
       })
       .catch(() => {
-        if (!cancelled && !playing) setCaptionTracks([]);
+        if (!cancelled && mountedRef.current && !playing) setCaptionTracks([]);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [activeId, playing]);
 
-  // Disable CC by default when no tracks — we use custom overlay instead
+  // Disable CC by default when no tracks
   useEffect(() => {
     if (captionTracks.length === 0 && hasCustomSub) {
       setSelectedCaption("");
-      setUseCustomSub(false); // default off, user toggles ON
+      setUseCustomSub(false);
     } else if (captionTracks.length === 0) {
       setSelectedCaption("");
     }
   }, [captionTracks.length, hasCustomSub]);
 
-  // Supplement caption tracks directly from YT IFrame player (uses viewer's IP, not AWS)
   const syncTracksFromPlayer = useCallback(() => {
-    const p = playerRef.current;
+    const p = playerRef.current as { getOption?: (a: string, b: string) => unknown } | null;
     if (!p || typeof p.getOption !== "function") return;
     try {
-      const list = p.getOption("captions", "tracklist") as any[];
+      const list = p.getOption("captions", "tracklist") as { languageCode: string; displayName?: string; kind?: string }[];
       if (Array.isArray(list) && list.length > 0) {
-        const tracks = list.map((t: any) => ({
+        const tracks = list.map((t) => ({
           lang: t.languageCode as string,
           name: (t.displayName as string) || (t.languageCode as string),
           isAuto: (t.kind as string) === "asr",
         }));
+        if (!mountedRef.current) return;
         setCaptionTracks((prev) => (prev.length === 0 || tracks.length > prev.length ? tracks : prev));
         setSelectedCaption((prev) => {
           if (prev) return prev;
@@ -142,43 +188,50 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           const hasEn = tracks.find((t) => t.lang === "en");
           return hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
         });
-      } else if (hasCustomSub) {
-        // truly no CC — keep off, custom available
+      } else if (hasCustomSub && mountedRef.current) {
         setSelectedCaption("");
       }
     } catch {}
   }, [hasCustomSub]);
 
-  // Load API when entering playing state
+  // Load YT API when entering playing state
   useEffect(() => {
     if (!playing || !hasYoutube) return;
     let cancelled = false;
     loadYouTubeAPI().then(() => {
-      if (cancelled) return;
+      if (cancelled || !mountedRef.current) return;
       setIsYTReady(true);
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [playing, hasYoutube]);
 
-  // Create / recreate player when ready or mode changes
+  // Create / recreate player only when playing+ready+activeId changes
   useEffect(() => {
     if (!playing || !isYTReady || !activeId) return;
-    const elId = playerContainerId.current;
-    // cleanup previous
-    if (playerRef.current?.destroy) {
-      try { playerRef.current.destroy(); } catch {}
+
+    const elId = playerContainerId;
+    // Destroy previous before creating new
+    const prev = playerRef.current as { destroy?: () => void } | null;
+    if (prev?.destroy) {
+      try { prev.destroy(); } catch {}
       playerRef.current = null;
     }
-    // ensure container exists
+    clearTimer();
+    clearTimeouts();
+
+    let cancelled = false;
+
     const tryCreate = () => {
+      if (cancelled || !mountedRef.current) return;
       const el = document.getElementById(elId);
       if (!el) {
-        setTimeout(tryCreate, 50);
+        const tid = window.setTimeout(tryCreate, 50) as unknown as number;
+        timeoutsRef.current.push(tid);
         return;
       }
-      playerRef.current = new window.YT.Player(elId, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const YTPlayer = (window.YT as { Player: new (id: string, opts: any) => unknown }).Player;
+      playerRef.current = new YTPlayer(elId, {
         videoId: activeId,
         playerVars: {
           controls: 0,
@@ -195,11 +248,11 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           origin: typeof window !== "undefined" ? window.location.origin : undefined,
         },
         events: {
-          onReady: (e: any) => {
+          onReady: (e: { target: { getDuration: () => number; setVolume: (v: number) => void; mute: () => void; loadModule?: (m: string) => void; setOption?: (a: string, b: string, c: unknown) => void; playVideo: () => void } }) => {
+            if (cancelled || !mountedRef.current) return;
             setDuration(e.target.getDuration?.() || 0);
             e.target.setVolume(volume);
             if (muted) e.target.mute();
-            // enable captions module and set language + sync tracklist from player
             try {
               e.target.loadModule?.("captions");
               if (selectedCaption) {
@@ -208,12 +261,12 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             } catch {}
             e.target.playVideo();
             setIsPlaying(true);
-            // YT tracklist available after a short delay
-            setTimeout(() => syncTracksFromPlayer(), 800);
-            setTimeout(() => syncTracksFromPlayer(), 2000);
+            const t1 = window.setTimeout(() => syncTracksFromPlayer(), 800) as unknown as number;
+            const t2 = window.setTimeout(() => syncTracksFromPlayer(), 2000) as unknown as number;
+            timeoutsRef.current.push(t1, t2);
           },
-          onStateChange: (e: any) => {
-            // YT.PlayerState: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
+          onStateChange: (e: { data: number }) => {
+            if (!mountedRef.current) return;
             if (e.data === 1) setIsPlaying(true);
             else if (e.data === 2) setIsPlaying(false);
             else if (e.data === 0) {
@@ -222,17 +275,27 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             }
           },
         },
-      });
+      } as unknown);
     };
     tryCreate();
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [isYTReady, playing, activeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update caption when language changes — if useCustomSub, keep YT CC off and show overlay
+    return () => {
+      cancelled = true;
+      clearTimer();
+      clearTimeouts();
+      const p = playerRef.current as { destroy?: () => void } | null;
+      if (p?.destroy) {
+        try { p.destroy(); } catch {}
+        playerRef.current = null;
+      }
+    };
+    // Intentionally exclude volume/muted/theater/caption menu etc. to avoid recreating player
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isYTReady, playing, activeId]);
+
+  // Update caption when language changes
   useEffect(() => {
-    const p = playerRef.current;
+    const p = playerRef.current as { loadModule?: (m: string) => void; setOption?: (a: string, b: string, c: unknown) => void } | null;
     if (!p || !playing || !isYTReady) return;
     try {
       p.loadModule?.("captions");
@@ -246,41 +309,35 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     } catch {}
   }, [selectedCaption, useCustomSub, playing, isYTReady]);
 
-  // Poll time — ใช้ Timestamp ของ YouTube เป็นตัวตั้ง (ตรงสุด ไม่ดริฟท์)
+  // Poll time
   useEffect(() => {
     if (!playing || !isYTReady) return;
-    if (timerRef.current) window.clearInterval(timerRef.current);
+    clearTimer();
     timerRef.current = window.setInterval(() => {
-      const p = playerRef.current;
+      const p = playerRef.current as { getCurrentTime?: () => number; getDuration?: () => number } | null;
       if (!p || typeof p.getCurrentTime !== "function") return;
       try {
         const c = p.getCurrentTime();
-        const d = p.getDuration();
+        const d = p.getDuration?.();
+        if (!mountedRef.current) return;
         if (!isNaN(c)) setCurrent(c);
-        if (!isNaN(d) && d > 0) setDuration(d);
+        if (d !== undefined && !isNaN(d) && d > 0) setDuration(d);
       } catch {}
-    }, 200) as unknown as number; // 200ms = ตรงกว่า 500ms/1000ms
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [playing, isYTReady, isPlaying]);
-
-  // Handle mode switch while playing
-  useEffect(() => {
-    // when mode changes and already playing, isYTReady effect will recreate player
-  }, [mode]);
+    }, 200) as unknown as number;
+    return () => { clearTimer(); };
+  }, [playing, isYTReady, isPlaying, clearTimer]);
 
   const togglePlay = useCallback(() => {
-    const p = playerRef.current;
+    const p = playerRef.current as { getPlayerState?: () => number; pauseVideo?: () => void; playVideo?: () => void } | null;
     if (!p) return;
     try {
       const state = p.getPlayerState?.();
       if (state === 1) {
-        p.pauseVideo();
-        setIsPlaying(false);
+        p.pauseVideo?.();
+        if (mountedRef.current) setIsPlaying(false);
       } else {
-        p.playVideo();
-        setIsPlaying(true);
+        p.playVideo?.();
+        if (mountedRef.current) setIsPlaying(true);
       }
     } catch {}
   }, []);
@@ -288,22 +345,22 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value);
     setCurrent(v);
-    playerRef.current?.seekTo?.(v, true);
+    (playerRef.current as { seekTo?: (v: number, b: boolean) => void } | null)?.seekTo?.(v, true);
   }, []);
 
   const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.target.value);
     setVolume(v);
-    playerRef.current?.setVolume?.(v);
+    (playerRef.current as { setVolume?: (v: number) => void; unMute?: () => void } | null)?.setVolume?.(v);
     if (v === 0) setMuted(true);
     else if (muted) {
       setMuted(false);
-      playerRef.current?.unMute?.();
+      (playerRef.current as { unMute?: () => void } | null)?.unMute?.();
     }
   }, [muted]);
 
   const toggleMute = useCallback(() => {
-    const p = playerRef.current;
+    const p = playerRef.current as { unMute?: () => void; mute?: () => void; setVolume?: (v: number) => void } | null;
     if (!p) return;
     if (muted) {
       p.unMute?.();
@@ -323,16 +380,14 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   }, []);
 
   const closePlayer = useCallback(() => {
-    if (playerRef.current?.destroy) {
-      try { playerRef.current.destroy(); } catch {}
-      playerRef.current = null;
+    destroyPlayer();
+    if (mountedRef.current) {
+      setPlaying(false);
+      setIsYTReady(false);
+      setIsPlaying(false);
+      setCurrent(0);
     }
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    setPlaying(false);
-    setIsYTReady(false);
-    setIsPlaying(false);
-    setCurrent(0);
-  }, []);
+  }, [destroyPlayer]);
 
   if (!hasYoutube && !showHlsFallback) {
     return (
@@ -359,15 +414,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              const nextMode = "sub";
-              if (mode !== nextMode) {
-                setMode(nextMode);
-                if (playing) {
-                  // will recreate player via effect
-                  setIsYTReady(false);
-                  setTimeout(() => setIsYTReady(true), 50);
-                }
-              }
+              if (mode !== "sub") setMode("sub");
             }}
             className={cn("rounded-full px-4 py-1.5 text-sm font-bold border transition flex items-center gap-1.5", mode === "sub" ? "bg-[#ff3b82] text-white border-[#ff3b82] shadow shadow-[#ff3b82]/20" : "bg-white/[0.06] text-zinc-300 border-white/10 hover:bg-white/10")}
           >
@@ -376,14 +423,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           <button
             onClick={() => {
               if (!youtubeDubId) return;
-              const nextMode: "sub" | "dub" = "dub";
-              if (mode !== nextMode) {
-                setMode(nextMode);
-                if (playing) {
-                  setIsYTReady(false);
-                  setTimeout(() => setIsYTReady(true), 50);
-                }
-              }
+              if (mode !== "dub") setMode("dub");
             }}
             disabled={!youtubeDubId}
             className={cn("rounded-full px-4 py-1.5 text-sm font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed", mode === "dub" ? "bg-white text-black border-white" : "bg-white/[0.06] text-zinc-300 border-white/10 hover:bg-white/10")}
@@ -441,36 +481,30 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           </button>
         ) : (
           <>
-            {/* YouTube iframe via API */}
-          <div
-            id={playerContainerId.current}
-            className="absolute inset-0 h-full w-full"
-          />
-          {/* Custom subtitle overlay — shows when useCustomSub (with delay adjust) */}
-          {useCustomSub && customCues && (
-            <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[90%] text-center">
-              <p className="inline-block rounded-xl bg-black/75 backdrop-blur px-3 py-1.5 text-sm sm:text-base font-bold text-white leading-tight shadow-lg border border-white/10">
-                {getActiveCue(customCues, current, subDelay * -1) || "\u00A0"}
-              </p>
-            </div>
-          )}
-            {/* Custom overlay - hide when not hovered during playback */}
+            <div
+              id={playerContainerId}
+              className="absolute inset-0 h-full w-full"
+            />
+            {useCustomSub && customCues && (
+              <div className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[90%] text-center">
+                <p className="inline-block rounded-xl bg-black/75 backdrop-blur px-3 py-1.5 text-sm sm:text-base font-bold text-white leading-tight shadow-lg border border-white/10">
+                  {getActiveCue(customCues, current, subDelay * -1) || "\u00A0"}
+                </p>
+              </div>
+            )}
             <div
               className={cn(
                 "absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-transparent to-transparent transition-opacity duration-300",
                 showControls || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
               )}
             >
-              {/* Center big play/pause on click */}
               <button onClick={togglePlay} className="absolute inset-0 grid place-items-center">
                 <span className={cn("flex h-16 w-16 items-center justify-center rounded-full bg-white/15 backdrop-blur border border-white/20 text-white transition", isPlaying ? "opacity-0 group-hover/player:opacity-100" : "opacity-100")}>
                   {isPlaying ? <Pause className="h-7 w-7 fill-white" /> : <Play className="h-7 w-7 fill-white ml-1" />}
                 </span>
               </button>
 
-              {/* Bottom custom controls */}
               <div className="relative p-3 sm:p-4 space-y-2">
-                {/* Progress */}
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
@@ -485,7 +519,6 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                   </span>
                 </div>
 
-                {/* Controls row */}
                 <div className="flex items-center gap-2">
                   <button onClick={togglePlay} className="h-8 w-8 grid place-items-center rounded-full bg-white text-black hover:bg-zinc-100 shrink-0">
                     {isPlaying ? <Pause className="h-4 w-4 fill-black" /> : <Play className="h-4 w-4 fill-black ml-0.5" />}
@@ -500,7 +533,6 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                   </div>
 
                   <div className="ml-auto flex items-center gap-1.5">
-                    {/* CC menu — real CC + custom */}
                     <div className="relative">
                       <button
                         onClick={() => setShowCaptionMenu(v => !v)}
@@ -510,71 +542,34 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                         <Subtitles className="h-4 w-4" />
                       </button>
                       {showCaptionMenu && (
-                        <div className="absolute bottom-full right-0 mb-2 w-64 rounded-2xl border border-white/10 bg-[#12121a] p-2 shadow-2xl z-10">
-                          <p className="px-2 py-1 text-xs font-bold text-white flex items-center gap-1.5"><Subtitles className="h-3.5 w-3.5" /> ซับ • คลิปจริง {captionTracks.length} ภาษา{hasCustomSub && " + ซับทำเอง"}</p>
-                          <p className="px-2 text-[11px] text-zinc-500">ไม่มี CC = ปิดไว้, มีซับทำเองให้เปิดได้</p>
-                          <div className="mt-2 max-h-56 overflow-y-auto space-y-1">
-                            {hasCustomSub && (
-                              <button
-                                onClick={() => {
-                                  setUseCustomSub(true);
-                                  setSelectedCaption("");
-                                  setShowCaptionMenu(false);
-                                  playerRef.current?.setOption?.("captions", "track", {});
-                                }}
-                                className={cn("w-full text-left rounded-xl px-3 py-1.5 text-xs flex items-center justify-between", useCustomSub ? "bg-[#ff3b82] text-white font-bold" : "text-zinc-300 hover:bg-white/10")}
-                              >
-                                <span>ซับไทย (เราทำเอง) <span className="text-[10px] bg-emerald-500 text-white px-1 rounded">ANIMEKU</span></span> {useCustomSub && <Check className="h-3.5 w-3.5" />}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setSelectedCaption("");
-                                setUseCustomSub(false);
-                                setShowCaptionMenu(false);
-                              }}
-                              className={cn("w-full text-left rounded-xl px-3 py-1.5 text-xs flex items-center justify-between", !selectedCaption && !useCustomSub ? "bg-white text-black font-bold" : "text-zinc-300 hover:bg-white/10")}
-                            >
-                              ปิดซับ <span className="text-[11px] text-zinc-500">Off</span> {!selectedCaption && <Check className="h-3.5 w-3.5" />}
+                        <div className="absolute bottom-10 right-0 w-64 rounded-xl bg-[#1a1a24] border border-white/10 shadow-xl p-2 z-20">
+                          <p className="text-xs font-bold text-white px-2 py-1">เลือกซับไตเติล</p>
+                          <button onClick={() => { setSelectedCaption(""); setUseCustomSub(false); setShowCaptionMenu(false); }} className={cn("w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between", !selectedCaption && !useCustomSub ? "bg-[#ff3b82] text-white" : "text-zinc-300 hover:bg-white/10")}>
+                            ปิดซับ {(!selectedCaption && !useCustomSub) && <Check className="h-3 w-3" />}
+                          </button>
+                          {captionTracks.map((t) => (
+                            <button key={t.lang} onClick={() => { setSelectedCaption(t.lang); setUseCustomSub(false); setShowCaptionMenu(false); }} className={cn("w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between", selectedCaption === t.lang && !useCustomSub ? "bg-[#ff3b82] text-white" : "text-zinc-300 hover:bg-white/10")}>
+                              <span>{t.name} <span className="text-white/50">({t.lang})</span>{t.isAuto && " • Auto"}</span>
+                              {selectedCaption === t.lang && !useCustomSub && <Check className="h-3 w-3" />}
                             </button>
-                            {captionTracks.map((t) => (
-                              <button
-                                key={t.lang}
-                                onClick={() => {
-                                  setUseCustomSub(false);
-                                  setSelectedCaption(t.lang);
-                                  setShowCaptionMenu(false);
-                                }}
-                                className={cn("w-full text-left rounded-xl px-3 py-1.5 text-xs flex items-center justify-between", selectedCaption === t.lang && !useCustomSub ? "bg-[#ff3b82] text-white font-bold" : "text-zinc-300 hover:bg-white/10")}
-                              >
-                                <span>{t.name || t.lang} <span className="text-[11px] opacity-60">({t.lang})</span> {t.isAuto && <span className="text-[10px] bg-white/15 px-1 rounded">Auto</span>}</span>
-                                {selectedCaption === t.lang && !useCustomSub && <Check className="h-3.5 w-3.5" />}
-                              </button>
-                            ))}
-                            {captionTracks.length === 0 && !hasCustomSub && <p className="px-3 py-2 text-xs text-zinc-500">ยังไม่พบซับแยก (CC) — คลิปนี้อาจมีซับฝังในภาพ (burn-in) ดูได้เลย หรือรอโหลดหลังกดเล่น 1-2 วิ</p>}
-                            {captionTracks.length === 0 && hasCustomSub && !useCustomSub && <p className="px-3 py-2 text-xs text-emerald-400">มีซับทำเองพร้อม — กด "ซับไทย (เราทำเอง)" ด้านบนเพื่อเปิด</p>}
-                            {hasCustomSub && useCustomSub && (
-                              <div className="mt-2 border-t border-white/10 pt-2">
-                                <p className="px-2 text-[11px] text-zinc-400 flex items-center justify-between">ปรับซับให้ตรงเสียง <span className="font-mono text-white">{subDelay > 0 ? `+${subDelay.toFixed(1)}s` : `${subDelay.toFixed(1)}s`}</span></p>
-                                <div className="mt-1 flex items-center gap-2 px-2">
-                                  <button onClick={() => setSubDelay(v => Math.max(-3, v - 0.5))} className="h-6 px-2 rounded-full bg-white/10 text-white text-xs hover:bg-white/20">-0.5s</button>
-                                  <input type="range" min={-3} max={3} step={0.5} value={subDelay} onChange={e => setSubDelay(Number(e.target.value))} className="flex-1 h-1 accent-[#ff3b82]" />
-                                  <button onClick={() => setSubDelay(v => Math.min(3, v + 0.5))} className="h-6 px-2 rounded-full bg-white/10 text-white text-xs hover:bg-white/20">+0.5s</button>
-                                  <button onClick={() => setSubDelay(0)} className="h-6 px-2 rounded-full bg-white text-black text-xs font-bold">รีเซ็ต</button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          ))}
+                          {hasCustomSub && (
+                            <button onClick={() => { setUseCustomSub(v => !v); if (!useCustomSub) setSelectedCaption(""); setShowCaptionMenu(false); }} className={cn("w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between mt-1 border-t border-white/10", useCustomSub ? "bg-[#ff3b82] text-white" : "text-zinc-300 hover:bg-white/10")}>
+                              <span>ซับทำเอง ANIMEKU {useCustomSub && "✓"}</span>
+                              {useCustomSub && <Check className="h-3 w-3" />}
+                            </button>
+                          )}
+                          {useCustomSub && (
+                            <div className="mt-2 px-2 flex items-center gap-2">
+                              <span className="text-xs text-zinc-400">ดีเลย์</span>
+                              <input type="range" min={-3} max={3} step={0.5} value={subDelay} onChange={(e) => setSubDelay(Number(e.target.value))} className="flex-1 h-1 accent-[#ff3b82]" />
+                              <span className="text-xs font-mono text-white">{subDelay > 0 ? `+${subDelay}` : subDelay}s</span>
+                            </div>
+                          )}
+                          <p className="text-[11px] text-zinc-500 px-2 pt-1">YT CC: {captionTracks.length} ภาษา • ซับทำเอง: {hasCustomSub ? `${customCues!.length} cues` : "ไม่มี"}</p>
                         </div>
                       )}
                     </div>
-                    <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white border border-white/10">
-                      {useCustomSub ? `ซับทำเอง ✓ ${subDelay !== 0 ? `(${subDelay > 0 ? "+" : ""}${subDelay}s)` : ""}` : mode === "sub" ? "ซับไทย" : "พากย์ไทย"} • {captionTracks.length > 0 ? `${captionTracks.length}ภาษา` : hasCustomSub ? "ซับทำเองพร้อม" : "Custom"}
-                    </span>
-                    {hasRealDub && <span className="hidden lg:inline-flex rounded-full bg-emerald-500 px-2 py-1 text-xs font-black text-white">พากย์จริง ✓</span>}
-                    <button onClick={() => setTheater(v => !v)} className="hidden sm:grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white" title="Theater">
-                      {theater ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    </button>
                     <button onClick={toggleFullscreen} className="h-8 w-8 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white" title="Fullscreen">
                       <Maximize2 className="h-4 w-4" />
                     </button>
@@ -584,7 +579,6 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
                   </div>
                 </div>
 
-                {/* Source badge */}
                 <div className="hidden sm:flex items-center justify-between text-[11px] text-white/50">
                   <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> YouTube iframe • Custom controls • {animeSlug}</span>
                   <span>แนะนำ • {title.slice(0, 40)}</span>
@@ -595,7 +589,6 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         )}
       </div>
 
-      {/* Bottom actions */}
       <div className={cn("mt-3 flex flex-wrap items-center gap-2 text-xs", theater && "px-4 py-3 bg-[#0a0a0f] border-t border-white/10 mt-0")}>
         <button className="inline-flex items-center gap-1.5 rounded-full bg-white text-black px-3 py-1.5 font-semibold hover:bg-zinc-100">
           <Bookmark className="h-3.5 w-3.5" /> เพิ่ม Watchlist

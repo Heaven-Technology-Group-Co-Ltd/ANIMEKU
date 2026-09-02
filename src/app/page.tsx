@@ -1,4 +1,4 @@
-import { getFeatured, getTrending, animes } from "@/lib/data";
+import { getFeatured, getTrending, getLatest, animes } from "@/lib/data";
 import Hero from "@/components/Hero";
 import { AnimeCard } from "@/components/AnimeCard";
 import Section from "@/components/Section";
@@ -7,7 +7,7 @@ import CategoryPills from "@/components/CategoryPills";
 export default function Home() {
   const featured = getFeatured()[0] ?? animes[0];
   const trending = getTrending().slice(0, 8);
-  const latestRecommended = getTrending().slice(0, 8);
+  const latestRecommended = getLatest().slice(0, 8);
 
   return (
     <>

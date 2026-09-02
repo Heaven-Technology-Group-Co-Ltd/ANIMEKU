@@ -18,11 +18,13 @@ export default function VideoPlayer({
   episodeNumber?: number;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
   const [muted, setMuted] = useState(false);
   const [levels, setLevels] = useState<{ height: number; index: number }[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(-1); // -1 = auto
+  const [isNativeHls, setIsNativeHls] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Resolve final HLS URL: env R2 > per-episode > fallback
@@ -35,43 +37,74 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video || !started) return;
 
-    let hls: Hls | null = null;
+    let cancelled = false;
+    const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
+    setIsNativeHls(nativeHls);
 
-    const isNativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
-
-    if (Hls.isSupported() && !isNativeHls) {
-      hls = new Hls({ enableWorker: true, lowLatencyMode: false });
-      hls.loadSource(resolvedUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
-        const lvls = data.levels.map((l, i) => ({ height: l.height, index: i }));
-        setLevels(lvls);
-        video.play().catch(() => {});
-      });
-      hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) {
-          setError(`HLS error: ${data.type} - ${data.details}`);
-        }
-      });
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
-        setCurrentLevel(data.level);
-      });
-    } else {
-      // Safari native HLS
+    // Native HLS (Safari) — no hls.js instance
+    if (nativeHls || !Hls.isSupported()) {
+      setLevels([]);
+      const onLoadedMeta = () => {
+        if (!cancelled) video.play().catch(() => {});
+      };
       video.src = resolvedUrl;
-      video.addEventListener("loadedmetadata", () => video.play().catch(() => {}));
-      setLevels([{ height: 1080, index: 0 }]);
+      video.addEventListener("loadedmetadata", onLoadedMeta);
+      const onPlay = () => { if (!cancelled) setPlaying(true); };
+      const onPause = () => { if (!cancelled) setPlaying(false); };
+      video.addEventListener("play", onPlay);
+      video.addEventListener("pause", onPause);
+      return () => {
+        cancelled = true;
+        video.removeEventListener("loadedmetadata", onLoadedMeta);
+        video.removeEventListener("play", onPlay);
+        video.removeEventListener("pause", onPause);
+        // Clear src to stop loading
+        video.removeAttribute("src");
+        video.load();
+      };
     }
 
-    const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
+    // hls.js path
+    const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+    hlsRef.current = hls;
+    hls.loadSource(resolvedUrl);
+    hls.attachMedia(video);
+
+    const onManifestParsed = (_e: string, data: { levels: { height: number }[] }) => {
+      if (cancelled) return;
+      const lvls = data.levels.map((l, i) => ({ height: l.height, index: i }));
+      setLevels(lvls);
+      // currentLevel -1 is default Auto; sync state
+      setCurrentLevel(hls.currentLevel);
+      video.play().catch(() => {});
+    };
+    const onLevelSwitched = (_e: string, data: { level: number }) => {
+      if (cancelled) return;
+      setCurrentLevel(data.level);
+    };
+    const onHlsError = (_e: string, data: { fatal: boolean; type: string; details: string }) => {
+      if (cancelled || !data.fatal) return;
+      setError(`HLS error: ${data.type} - ${data.details}`);
+    };
+
+    hls.on(Hls.Events.MANIFEST_PARSED, onManifestParsed);
+    hls.on(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+    hls.on(Hls.Events.ERROR, onHlsError);
+
+    const onPlay = () => { if (!cancelled) setPlaying(true); };
+    const onPause = () => { if (!cancelled) setPlaying(false); };
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
 
     return () => {
+      cancelled = true;
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
-      if (hls) hls.destroy();
+      hls.off(Hls.Events.MANIFEST_PARSED, onManifestParsed);
+      hls.off(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+      hls.off(Hls.Events.ERROR, onHlsError);
+      try { hls.destroy(); } catch {}
+      if (hlsRef.current === hls) hlsRef.current = null;
     };
   }, [started, resolvedUrl]);
 
@@ -90,15 +123,13 @@ export default function VideoPlayer({
   };
 
   const handleQuality = (idx: number) => {
-    const v = videoRef.current as HTMLVideoElement & { _hls?: Hls };
-    // Find hls instance via video
-    // Simpler: we store level via Hls.currentLevel if available
-    // hls.js instance not accessible here; use query selector workaround: reload with level
-    // For demo, just set state; hls auto handles via currentLevel
+    // Native HLS has no manual levels — no-op
+    if (isNativeHls) return;
+    const hls = hlsRef.current;
+    if (!hls) return;
+    // -1 = Auto (adaptive), otherwise manual level
+    hls.currentLevel = idx;
     setCurrentLevel(idx);
-    // Try to set via global hls if exists
-    const hlsInstances = (window as unknown as { hlsInstance?: Hls }).hlsInstance;
-    if (hlsInstances) (hlsInstances as Hls).currentLevel = idx;
   };
 
   if (!started) {
@@ -159,25 +190,30 @@ export default function VideoPlayer({
 
           <div className="flex-1" />
 
-          {/* Quality selector */}
-          <div className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1">
-            <Settings2 className="h-3.5 w-3.5 text-zinc-400" />
-            <select
-              value={currentLevel}
-              onChange={(e) => handleQuality(Number(e.target.value))}
-              className="bg-transparent text-xs text-white outline-none"
-            >
-              <option value={-1} className="text-black">
-                Auto
-              </option>
-              {levels.map((l) => (
-                <option key={l.index} value={l.index} className="text-black">
-                  {l.height}p
+          {/* Quality selector — hidden for native HLS (Safari) where hls.js is not active */}
+          {!isNativeHls && (
+            <div className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-1">
+              <Settings2 className="h-3.5 w-3.5 text-zinc-400" />
+              <select
+                value={currentLevel}
+                onChange={(e) => handleQuality(Number(e.target.value))}
+                className="bg-transparent text-xs text-white outline-none"
+              >
+                <option value={-1} className="text-black">
+                  Auto
                 </option>
-              ))}
-              {levels.length === 0 && <option className="text-black">1080p</option>}
-            </select>
-          </div>
+                {levels.map((l) => (
+                  <option key={l.index} value={l.index} className="text-black">
+                    {l.height}p
+                  </option>
+                ))}
+                {levels.length === 0 && <option className="text-black">Auto</option>}
+              </select>
+            </div>
+          )}
+          {isNativeHls && (
+            <span className="rounded-full bg-black/60 px-3 py-1 text-xs text-zinc-400">Auto (Native HLS)</span>
+          )}
 
           <button
             onClick={() => videoRef.current?.requestFullscreen()}
