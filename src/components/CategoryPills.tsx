@@ -1,11 +1,9 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { categories } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
 export default function CategoryPills({ active }: { active?: string }) {
-  const pathname = usePathname();
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
       {categories.map((c) => {

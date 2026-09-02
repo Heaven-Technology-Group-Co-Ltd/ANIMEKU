@@ -14,13 +14,7 @@ type Props = {
   hlsUrl?: string;
 };
 
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
+
 
 // Singleton promise for YT IFrame API — prevents duplicate script tags
 let ytApiPromise: Promise<void> | null = null;
@@ -133,8 +127,12 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   // Fetch caption tracks for active video
   useEffect(() => {
     if (!activeId) {
-      setCaptionTracks([]);
-      return;
+      // Defer synchronous state update to avoid react-hooks/set-state-in-effect
+      const tid = window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        setCaptionTracks([]);
+      }, 0);
+      return () => window.clearTimeout(tid);
     }
     let cancelled = false;
     fetch(`/api/youtube/captions?v=${activeId}`)
@@ -159,13 +157,19 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
     return () => { cancelled = true; };
   }, [activeId, playing]);
 
-  // Disable CC by default when no tracks
+  // Disable CC by default when no tracks — deferred to avoid synchronous setState in effect
   useEffect(() => {
-    if (captionTracks.length === 0 && hasCustomSub) {
-      setSelectedCaption("");
-      setUseCustomSub(false);
-    } else if (captionTracks.length === 0) {
-      setSelectedCaption("");
+    if (captionTracks.length === 0) {
+      const tid = window.setTimeout(() => {
+        if (!mountedRef.current) return;
+        if (hasCustomSub) {
+          setSelectedCaption("");
+          setUseCustomSub(false);
+        } else {
+          setSelectedCaption("");
+        }
+      }, 0);
+      return () => window.clearTimeout(tid);
     }
   }, [captionTracks.length, hasCustomSub]);
 
@@ -229,8 +233,8 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         timeoutsRef.current.push(tid);
         return;
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const YTPlayer = (window.YT as { Player: new (id: string, opts: any) => unknown }).Player;
+      if (!window.YT?.Player) return;
+      const YTPlayer = window.YT.Player;
       playerRef.current = new YTPlayer(elId, {
         videoId: activeId,
         playerVars: {
@@ -275,7 +279,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
             }
           },
         },
-      } as unknown);
+      });
     };
     tryCreate();
 
