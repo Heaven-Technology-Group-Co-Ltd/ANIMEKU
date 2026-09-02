@@ -47,17 +47,46 @@ jobs:
             echo "==> Building and starting ANIMEKU..."
             docker compose up -d --build --remove-orphans
 
-            echo "==> Waiting for application..."
+            echo "==> Waiting for application health (http://127.0.0.1:1234/api/health)..."
+            HEALTH_URL="http://127.0.0.1:1234/api/health"
             for i in $(seq 1 30); do
-              if curl -fsS http://127.0.0.1:1234 >/dev/null 2>&1; then
-                echo "Health check passed."
-                exit 0
+              # 1) Check HTTP health endpoint returns 200 and valid JSON with status ok + service ANIMEKU
+              if curl -fsS "$HEALTH_URL" 2>/dev/null | grep -q '"status":"ok"' && curl -fsS "$HEALTH_URL" 2>/dev/null | grep -q '"service":"ANIMEKU"'; then
+                echo "Health endpoint responded ok (attempt $i/30)."
+
+                # 2) Prefer Docker health status if available
+                DOCKER_HEALTH=$(docker inspect --format '{{.State.Health.Status}}' webanime-app 2>/dev/null || echo "no-healthcheck")
+                echo "Docker health status: $DOCKER_HEALTH"
+
+                if [ "$DOCKER_HEALTH" = "healthy" ] || [ "$DOCKER_HEALTH" = "no-healthcheck" ]; then
+                  echo "Health check passed (endpoint + docker: $DOCKER_HEALTH)."
+                  exit 0
+                fi
+
+                if [ "$DOCKER_HEALTH" = "starting" ]; then
+                  echo "Container still starting but endpoint is healthy — considering passed (endpoint is authoritative)."
+                  exit 0
+                fi
+
+                echo "Endpoint ok but docker health is $DOCKER_HEALTH, retrying..."
+              else
+                echo "Attempt $i/30: health endpoint not ready yet..."
               fi
 
               sleep 2
             done
 
-            echo "Health check failed. Rolling back..."
+            echo "Health check failed. Diagnostics:"
+            echo "--- curl $HEALTH_URL ---"
+            curl -fsS "$HEALTH_URL" 2>&1 || echo "curl failed"
+            echo "--- docker inspect health ---"
+            docker inspect --format '{{json .State.Health}}' webanime-app 2>/dev/null || echo "no health data"
+            echo "--- docker logs (tail 100) ---"
+            docker logs --tail 100 webanime-app 2>&1 || true
+            echo "--- docker compose ps ---"
+            docker compose ps 2>&1 || true
+
+            echo "Rolling back..."
 
             if docker image inspect webanime:rollback >/dev/null 2>&1; then
               docker tag webanime:rollback webanime:latest

@@ -41,5 +41,9 @@ USER nextjs
 
 EXPOSE 1234
 
+# Lightweight healthcheck — uses wget (available in node:22-alpine) and works as non-root
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:1234/api/health | grep -q '"status":"ok"' || exit 1
+
 # Next.js respects PORT env, but explicitly pass -p for clarity
 CMD ["sh", "-c", "npx next start -p 1234 -H 0.0.0.0"]
