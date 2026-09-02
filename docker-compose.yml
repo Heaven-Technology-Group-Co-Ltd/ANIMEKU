@@ -1,0 +1,11 @@
+services:
+  webanime:
+    build: .
+    container_name: webanime-app
+    ports:
+      - "1234:1234"
+    environment:
+      - NODE_ENV=production
+      - PORT=1234
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped

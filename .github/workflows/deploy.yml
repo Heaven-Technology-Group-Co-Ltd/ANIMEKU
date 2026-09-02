@@ -1,0 +1,67 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/ec2-user/project/webanime
+
+            echo "==> Checking working tree..."
+            git diff --quiet
+            git diff --cached --quiet
+
+            echo "==> Syncing main..."
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            echo "==> Saving current image for rollback..."
+            if docker image inspect webanime:latest >/dev/null 2>&1; then
+              docker tag webanime:latest webanime:rollback
+            fi
+
+            echo "==> Building and starting ANIMEKU..."
+            docker compose up -d --build --remove-orphans
+
+            echo "==> Waiting for application..."
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:1234 >/dev/null 2>&1; then
+                echo "Health check passed."
+                exit 0
+              fi
+
+              sleep 2
+            done
+
+            echo "Health check failed. Rolling back..."
+
+            if docker image inspect webanime:rollback >/dev/null 2>&1; then
+              docker tag webanime:rollback webanime:latest
+              docker compose up -d --force-recreate
+            fi
+
+            exit 1
