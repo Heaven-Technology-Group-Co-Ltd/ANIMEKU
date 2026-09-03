@@ -123,7 +123,8 @@ export function toAnime(a: AniAnime, rank?: number): Anime {
     trendingRank: rank,
     featured: rank ? rank <= 3 : false,
     trailerYoutubeId: a.trailer?.site === "youtube" ? a.trailer.id : undefined,
-    trailerDubYoutubeId: a.trailer?.site === "youtube" ? a.trailer.id : undefined,
+    // P1.5: AniList trailer ไม่ใช่หลักฐานพากย์ไทย — dub ต้องมาจาก dubMap ที่ยืนยันแล้วเท่านั้น
+    trailerDubYoutubeId: undefined,
     trailerThumbnail: a.trailer?.thumbnail || undefined,
     episodes:
       status === "ยังไม่ฉาย"
