@@ -3,11 +3,16 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Share2, Bookmark, Subtitles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCustomSubs, getActiveCue } from "@/lib/customSubs";
+import { getDubInfo, getDubDisplayState, DUB_UNAVAILABLE_LABEL } from "@/lib/dubMap";
 
 type Props = {
   title: string;
   youtubeId?: string;
   youtubeDubId?: string;
+  /** Anime id — ใช้ lookup dubMap เพื่อยืนยันพากย์ไทย (P1.5) */
+  animeId?: string;
+  /** true ก็ต่อเมื่อ youtubeDubId ผ่านการยืนยันแล้ว (resolve ฝั่ง page ผ่าน resolveTrailerDub) */
+  dubVerified?: boolean;
   thumbnail?: string;
   animeSlug: string;
   episodeNumber?: number;
@@ -52,10 +57,17 @@ function loadYouTubeAPI(): Promise<void> {
   return ytApiPromise;
 }
 
-export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnail, animeSlug, hlsUrl }: Props) {
+export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId, dubVerified, thumbnail, animeSlug, hlsUrl }: Props) {
   const clean = (v?: string) => v?.trim();
   const youtubeIdClean = clean(youtubeId);
   const youtubeDubClean = clean(youtubeDubId);
+  // P1.5: ถือว่ามีพากย์ไทยอย่างเป็นทางการก็ต่อเมื่อยืนยันแล้วเท่านั้น —
+  // ยืนยันผ่าน dubMap (lookup ด้วย animeId) หรือ prop dubVerified ที่ page resolve มาแล้ว
+  const dubEntry = animeId ? getDubInfo(animeId) : undefined;
+  const resolvedDubId = dubEntry?.videoId ?? youtubeDubClean;
+  const resolvedVerified = dubEntry ? true : dubVerified === true;
+  const hasVerifiedDub =
+    getDubDisplayState({ videoId: resolvedDubId, verified: resolvedVerified, mainTrailerId: youtubeIdClean }) === "verified";
   const [mode, setMode] = useState<"sub" | "dub">("sub");
   const [playing, setPlaying] = useState(false);
   const [theater, setTheater] = useState(false);
@@ -79,10 +91,9 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
   const timeoutsRef = useRef<number[]>([]);
   const mountedRef = useRef(true);
 
-  const activeId = mode === "dub" && youtubeDubClean ? youtubeDubClean : youtubeIdClean;
+  const activeId = mode === "dub" && hasVerifiedDub && resolvedDubId ? resolvedDubId : youtubeIdClean;
   const hasYoutube = !!activeId;
   const showHlsFallback = !hasYoutube && !!hlsUrl;
-  const hasRealDub = !!youtubeDubClean && youtubeDubClean !== youtubeIdClean;
   const customCues = activeId ? getCustomSubs(activeId) : null;
   const hasCustomSub = !!customCues && customCues.length > 0;
 
@@ -426,10 +437,12 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
           </button>
           <button
             onClick={() => {
-              if (!youtubeDubId) return;
+              // P1.5: เปิดโหมดพากย์ไทยได้เฉพาะเมื่อมีข้อมูลที่ยืนยันแล้วเท่านั้น
+              if (!hasVerifiedDub) return;
               if (mode !== "dub") setMode("dub");
             }}
-            disabled={!youtubeDubId}
+            disabled={!hasVerifiedDub}
+            title={hasVerifiedDub ? "พากย์ไทย" : DUB_UNAVAILABLE_LABEL}
             className={cn("rounded-full px-4 py-1.5 text-sm font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed", mode === "dub" ? "bg-white text-black border-white" : "bg-white/[0.06] text-zinc-300 border-white/10 hover:bg-white/10")}
           >
             พากย์ไทย
@@ -600,7 +613,7 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, thumbnai
         <button className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-white hover:bg-white/10">
           <Share2 className="h-3.5 w-3.5" /> แชร์
         </button>
-        <span className="text-zinc-500 ml-1 hidden sm:inline">YouTube iframe • Custom UI • ตัวอย่างแนะนำ • {useCustomSub ? "ซับทำเอง ✓" : `ซับจริง ${captionTracks.length}ภาษา ${captionTracks.map(t=>t.lang).slice(0,4).join("/")}`} {hasRealDub ? "• พากย์ไทยจริง" : hasCustomSub ? "• มีซับทำเอง" : "• พากย์ไทยตาม Trailer หลัก"}</span>
+        <span className="text-zinc-500 ml-1 hidden sm:inline">YouTube iframe • Custom UI • ตัวอย่างแนะนำ • {useCustomSub ? "ซับทำเอง ✓" : `ซับจริง ${captionTracks.length}ภาษา ${captionTracks.map(t=>t.lang).slice(0,4).join("/")}`} {hasVerifiedDub ? "• พากย์ไทย" : hasCustomSub ? "• มีซับทำเอง" : `• ${DUB_UNAVAILABLE_LABEL}`}</span>
         {theater && (
           <button onClick={() => setTheater(false)} className="ml-auto rounded-full bg-white text-black px-4 py-1.5 font-bold">
             ออกจาก Theater

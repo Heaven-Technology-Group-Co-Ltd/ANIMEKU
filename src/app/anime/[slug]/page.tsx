@@ -10,6 +10,7 @@ import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
 import LegalPlatforms from "@/components/LegalPlatforms";
 import { getSiteUrl } from "@/lib/env";
+import { resolveTrailerDub } from "@/lib/dubMap";
 
 async function resolveAnime(slug: string) {
   const local = getAnimeBySlug(slug);
@@ -45,6 +46,8 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
   const anime = await resolveAnime(slug);
   if (!anime) notFound();
   const siteUrl = getSiteUrl();
+  // P1.5: พากย์ไทยแสดงได้เฉพาะรายการที่ยืนยันใน dubMap เท่านั้น
+  const dub = resolveTrailerDub(anime);
 
   return (
     <>
@@ -95,7 +98,9 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
           <TrailerPlayer
             title={`แนะนำ ${anime.titleTh} — ตัวอย่างแนะนำ`}
             youtubeId={anime.trailerYoutubeId}
-            youtubeDubId={anime.trailerDubYoutubeId}
+            youtubeDubId={dub.videoId}
+            dubVerified={dub.verified}
+            animeId={anime.id}
             thumbnail={anime.trailerThumbnail || anime.cover}
             animeSlug={anime.slug}
           />
