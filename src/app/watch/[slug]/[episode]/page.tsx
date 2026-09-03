@@ -141,7 +141,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
                 <ul className="mt-2 space-y-1.5 text-sm leading-6 text-zinc-300">
                   <li>• เรตติ้ง {anime.rating.toFixed(1)}/10 • สตูดิโอ {anime.studio} • {anime.genres.slice(0, 3).join(" / ")}</li>
                   <li>• เหมาะกับคนชอบแนว {anime.genres[0]} {anime.genres[1] ? `และ ${anime.genres[1]}` : ""} — ดูตัวอย่างก่อนตัดสินใจ</li>
-                  <li>• แนะนำดูถูกลิขสิทธิ์ผ่านปุ่ม YouTube / Bilibili / iQIYI / Crunchyroll ด้านบน</li>
+                  <li>• ค้นหาเรื่องนี้บนแพลตฟอร์มถูกลิขสิทธิ์ผ่านปุ่มด้านบน แล้วตรวจสอบสิทธิ์การรับชมปัจจุบันบนแพลตฟอร์ม</li>
                 </ul>
               </div>
             </div>
