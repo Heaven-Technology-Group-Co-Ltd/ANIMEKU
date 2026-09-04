@@ -95,4 +95,50 @@ describe("compose image/tag strategy matches deploy (P2.1-b)", () => {
     expect(preBuild).toMatch(/\.env/);
     expect(preBuild).toMatch(/NEXT_PUBLIC_SITE_URL/);
   });
+
+  it("deploy fails loud on missing/invalid public env before build (PR #10)", () => {
+    // Empty value must refuse to bake localhost fallback.
+    expect(deploy).toMatch(/NEXT_PUBLIC_SITE_URL is required in production/);
+    // Loopback/local hostnames must be rejected via a node WHATWG-URL check.
+    expect(deploy).toMatch(/fail-loud|Validating NEXT_PUBLIC_SITE_URL/);
+    expect(deploy).toMatch(/must not be loopback\/local/);
+    // Gate must exit non-zero before `docker compose up --build`.
+    const gateIdx = deploy.indexOf("Validating NEXT_PUBLIC_SITE_URL");
+    const buildIdx = deploy.indexOf("Building and starting");
+    expect(gateIdx).toBeGreaterThan(0);
+    expect(gateIdx).toBeLessThan(buildIdx);
+    const gateBlock = deploy.slice(gateIdx, buildIdx);
+    expect(gateBlock).toMatch(/exit 1/);
+    // No new secrets introduced by the gate.
+    expect(gateBlock).not.toMatch(/VPS_SSH_KEY|VPS_HOST.*key|password|token/i);
+  });
+});
+
+describe("compose log rotation (PR #10)", () => {
+  const compose = read("docker-compose.yml");
+
+  it("webanime service uses json-file driver with 10m/3 rotation", () => {
+    expect(compose).toMatch(/logging:\s*\n\s*driver:\s*json-file/);
+    expect(compose).toMatch(/max-size:\s*["']?10m["']?/);
+    expect(compose).toMatch(/max-file:\s*["']?3["']?/);
+  });
+});
+
+describe(".dockerignore production hygiene (PR #10)", () => {
+  const dockerignore = read(".dockerignore");
+
+  it("excludes secrets, git, build output and editor clutter", () => {
+    for (const entry of [
+      "node_modules",
+      ".next",
+      ".git",
+      ".env",
+      "coverage",
+      "*.log",
+      ".vercel",
+      ".DS_Store",
+    ]) {
+      expect(dockerignore).toContain(entry);
+    }
+  });
 });

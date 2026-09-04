@@ -64,7 +64,14 @@ jobs:
             fi
             set +a
             if [ -z "${NEXT_PUBLIC_SITE_URL:-}" ]; then
-              echo "WARNING: NEXT_PUBLIC_SITE_URL is empty — production build will bake localhost fallback."
+              echo "ERROR: NEXT_PUBLIC_SITE_URL is required in production — set it to your canonical origin. Refusing to bake localhost fallback."
+              exit 1
+            fi
+
+            echo "==> Validating NEXT_PUBLIC_SITE_URL (fail-loud, no loopback/local in prod)..."
+            if ! node -e "const raw=(process.env.NEXT_PUBLIC_SITE_URL||'').trim(); if(!raw){console.error('ERROR: NEXT_PUBLIC_SITE_URL is empty');process.exit(1)} let u; try{u=new URL(raw)}catch(e){console.error('ERROR: NEXT_PUBLIC_SITE_URL is not a valid absolute URL');process.exit(1)} if(u.protocol!=='http:'&&u.protocol!=='https:'){console.error('ERROR: NEXT_PUBLIC_SITE_URL must use http(s), got '+u.protocol);process.exit(1)} const h=u.hostname.replace(/^\\[|\\]$/g,'').toLowerCase().replace(/\\.\$/, ''); const exact=new Set(['localhost','127.0.0.1','0.0.0.0','::1']); let loop=exact.has(h)||/^127\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\$/.test(h)||h.indexOf('127.0.0.1')!==-1||h==='localhost'||h.endsWith('.localhost')||h.endsWith('.local'); if(loop){console.error('ERROR: NEXT_PUBLIC_SITE_URL must not be loopback/local in production (hostname '+u.hostname+')');process.exit(1)}"; then
+              echo "ERROR: NEXT_PUBLIC_SITE_URL failed production validation — refusing to deploy."
+              exit 1
             fi
 
             echo "==> Building and starting ANIMEKU..."

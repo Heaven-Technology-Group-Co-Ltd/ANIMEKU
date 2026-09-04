@@ -17,6 +17,9 @@ Format: `- [ ] ID | MODE | one-line goal | evidence:`
 - [x] U13 | implement | P2.6 performance + scalability | evidence: STATUS pass/full, branch chore/p2-performance-scalability, lint/test(295)/build(230 pages)/compose/docker-build green, 284->295 tests, captions TTL cache + client-boundary fixes, no PR/merge/VPS
 - [x] U14 | implement | P2 consolidation + pre-PR review into chore/p2-consolidated | evidence: STATUS pass/full, 47 files +4633/-232 e370800, lint/test(295x2)/build(230)/compose/docker-build+health200 green, catalog 104/104, main untouched no PR/merge/VPS
 - [x] U14 | implement | P2.1->P2.6 consolidation into chore/p2-consolidated | evidence: STATUS pass/full, 6 P2 branches had zero unique commits (all == 022f8cd, work carried in tree), fresh branch at baseline + carried tree committed, lint/test(295x2)/build/compose/docker-build+curl-200/nextjs-user green, catalog 104/104, no PR/merge/push/VPS
+- [x] U15 | implement | P2 push + create PR #10 (base main <- chore/p2-consolidated) | evidence: STATUS pass/full, lint/test(295)/build(230)/compose/docker-build green, remote ANIMEKU verified, PR https://github.com/Heaven-Technology-Group-Co-Ltd/ANIMEKU/pull/10 OPEN MERGEABLE, NOT merged, main+VPS untouched
+- [x] U16 | implement | Fix PR #10 blockers on fix/p2-pr10-review | evidence: STATUS pass/full, 7 files +224/-9, lint/test(304)/build(230+)/compose/docker-build green, prod fail-loud + deploy gate + log rotation + dockerignore, local-only no push/merge
+- [x] U17 | verify | Final review PR #10 fixes on fix/p2-pr10-review | evidence: STATUS pass/full VERDICT READY TO UPDATE PR, 15/15 checklist, lint/test(304)/build(230/230)/compose/docker-build green, no scope-creep/secrets/VPS/main-touch
 
 ## Done log (optional, one line)
 - U1: pass | full | arch/data/maintainability 23 findings
