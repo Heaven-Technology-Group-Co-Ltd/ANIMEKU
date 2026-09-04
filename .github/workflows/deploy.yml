@@ -29,19 +29,46 @@ jobs:
 
             cd /home/ec2-user/project/webanime
 
-            echo "==> Checking working tree..."
-            if [ -n "$(git status --porcelain)" ]; then
-              echo "ERROR: Production working tree is dirty."
-              git status --short
-              exit 1
-            else
+            echo "==> Checking working tree (fail-closed; only docs/LEDGER.md drift tolerated)..."
+            PORCELAIN="$(git status --porcelain)"
+            LEDGER_BACKUP=""
+            if [ -z "$PORCELAIN" ]; then
               echo "==> Working tree clean."
+            else
+              # Fail-closed allowlist: every porcelain line must be a
+              # modification (M in index and/or worktree) of the single
+              # documented path `docs/LEDGER.md` — the operational project
+              # ledger, which is documentation-only and drifts on the VPS
+              # (local session log appends). Anything else — other paths,
+              # untracked (??), deletions, renames — keeps the deploy blocked.
+              # Exact match only: no `docs/*`, no `*.md`, no globs.
+              BLOCKERS="$(printf '%s\n' "$PORCELAIN" | grep -v -E '^(M | M|MM) docs/LEDGER\.md$' || true)"
+              if [ -z "$BLOCKERS" ]; then
+                echo "WARNING: only docs/LEDGER.md is modified locally (operational ledger drift). Backing up and proceeding; all other tracked changes remain blockers."
+                git status --short
+                LEDGER_BACKUP="/tmp/prod-LEDGER-backup.md"
+                cp docs/LEDGER.md "$LEDGER_BACKUP"
+                echo "Backed up docs/LEDGER.md to $LEDGER_BACKUP."
+              else
+                echo "ERROR: Production working tree is dirty."
+                echo "$BLOCKERS"
+                git status --short
+                exit 1
+              fi
             fi
 
             echo "==> Syncing main..."
             git fetch origin main
             git checkout main
             git reset --hard origin/main
+
+            # Preserve production-local ledger drift across the reset above:
+            # without this restore, `reset --hard` would silently discard the
+            # tolerated docs/LEDGER.md modification. Never discard automatically.
+            if [ -n "${LEDGER_BACKUP:-}" ] && [ -f "$LEDGER_BACKUP" ]; then
+              cp "$LEDGER_BACKUP" docs/LEDGER.md
+              echo "Restored production-local docs/LEDGER.md from backup (deploy does not discard ledger drift)."
+            fi
 
             echo "==> Saving current image for rollback..."
             # webanime:latest is the real compose image (see docker-compose.yml
