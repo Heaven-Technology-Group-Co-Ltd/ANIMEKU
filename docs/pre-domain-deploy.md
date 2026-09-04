@@ -8,7 +8,7 @@ letting `localhost` silently become the canonical production URL.
 | Mode | How | `NEXT_PUBLIC_SITE_URL` |
 |---|---|---|
 | Real production (default) | `PRE_DOMAIN_DEPLOY` unset, empty, or anything but exact `"1"` | Must be a real absolute `http(s)` origin. `localhost` / loopback / local hostnames (`127.0.0.1`, full `127/8`, `0.0.0.0`, `::1`, `*.localhost`, `*.local`) are **rejected**; empty/invalid values **fail closed**. |
-| Pre-domain (explicit) | `PRE_DOMAIN_DEPLOY=1` (exact `"1"` only) | Permits **only** the temporary URL `http://localhost:1234`. Every other loopback/local value is still rejected; real origins keep passing. |
+| Pre-domain (explicit) | `PRE_DOMAIN_DEPLOY=1` (exact `"1"` only) | Permits **only the exact URL** `http://localhost:1234` (byte-for-byte — trailing slash, path, query, or fragment variants are rejected). Every other loopback/local value is still rejected; real origins keep passing. |
 
 `"true"`, `"yes"`, `"0"`, `"2"` and friends do **not** enable pre-domain mode —
 they fail closed to real production.

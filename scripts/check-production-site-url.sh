@@ -103,15 +103,13 @@ is_loopback() {
   return 1
 }
 
-# 5) Pre-domain allowlist: ONLY the exact temporary origin http://localhost:1234
-#    (path/query tolerated — getSiteUrl() canonicalizes to origin anyway).
-#    A real (non-loopback) origin passes in BOTH modes.
-if [ "$MODE" = "pre-domain" ]; then
-  ORIGIN="$SCHEME://$(printf '%s' "$HOSTPORT" | tr '[:upper:]' '[:lower:]')"
-  if [ "$ORIGIN" = "http://localhost:1234" ]; then
-    echo "OK: NEXT_PUBLIC_SITE_URL=\"$URL\" accepted as explicit pre-domain temporary URL (mode=pre-domain)."
-    exit 0
-  fi
+# 5) Pre-domain allowlist: ONLY the exact temporary URL "http://localhost:1234"
+#    (byte-for-byte against the trimmed value — paths, queries, and fragments
+#    are NOT stripped for this decision). A real (non-loopback) origin passes
+#    in BOTH modes.
+if [ "$MODE" = "pre-domain" ] && [ "$URL" = "http://localhost:1234" ]; then
+  echo "OK: NEXT_PUBLIC_SITE_URL=\"$URL\" accepted as explicit pre-domain temporary URL (mode=pre-domain)."
+  exit 0
 fi
 
 if is_loopback "$HOST"; then

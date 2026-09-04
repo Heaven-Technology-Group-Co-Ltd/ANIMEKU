@@ -103,6 +103,18 @@ describe("explicit pre-domain mode behaves as designed", () => {
       "http://[::1]:1234",
       "http://app.localhost:1234",
       "http://mybox.local:1234",
+      // Exact-match contract: only byte-for-byte "http://localhost:1234"
+      // passes — trailing slash, path, query, fragment, scheme, port, and
+      // bare-host variations are all rejected.
+      "http://localhost:1234/",
+      "http://localhost:1234/path",
+      "http://localhost:1234?x=1",
+      "http://localhost:1234/foo?x=1",
+      "http://localhost:1234#fragment",
+      "http://localhost:1234/path?x=1#fragment",
+      "https://localhost:1234",
+      "http://localhost:1235",
+      "http://localhost",
     ]) {
       const r = runGate({ siteUrl: bad, preDomain: "1" });
       expect(r.code).toBe(1);
@@ -161,6 +173,14 @@ describe("gate script stays POSIX (no host node dependency)", () => {
     // fine — only a line-opening `[[` conditional is a bashism.
     expect(script).not.toMatch(/^\s*\[\[/m);
     expect(script).not.toMatch(/^function\s/m);
+  });
+
+  it("decides pre-domain by exact full-URL match (no origin normalization)", () => {
+    // The pre-domain allowlist must compare the whole trimmed URL value —
+    // building a scheme://host:port origin would silently tolerate paths,
+    // queries, and fragments.
+    expect(script).not.toMatch(/\bORIGIN\b/);
+    expect(script).toContain('[ "$URL" = "http://localhost:1234" ]');
   });
 });
 
