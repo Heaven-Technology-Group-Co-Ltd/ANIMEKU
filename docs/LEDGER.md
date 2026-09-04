@@ -15,6 +15,7 @@ Format: `- [ ] ID | MODE | one-line goal | evidence:`
 - [x] U11 | implement | P2.4 API+network test coverage | evidence: STATUS pass/full, branch chore/p2-api-network-tests, lint/test(265x3)/build/compose/docker-build green, 202->265 tests, TEST-02/03 resolved TEST-04 deferred-pinned
 - [x] U12 | implement | P2.5 SEO + data integrity | evidence: STATUS pass/full, branch chore/p2-seo-data-integrity, lint/test(284)/build/compose/docker-build green, 265->284 tests, omit-unknown SEO, no PR/merge/VPS
 - [x] U13 | implement | P2.6 performance + scalability | evidence: STATUS pass/full, branch chore/p2-performance-scalability, lint/test(295)/build(230 pages)/compose/docker-build green, 284->295 tests, captions TTL cache + client-boundary fixes, no PR/merge/VPS
+- [x] U14 | implement | P2 consolidation + pre-PR review into chore/p2-consolidated | evidence: STATUS pass/full, 47 files +4633/-232 e370800, lint/test(295x2)/build(230)/compose/docker-build+health200 green, catalog 104/104, main untouched no PR/merge/VPS
 - [x] U14 | implement | P2.1->P2.6 consolidation into chore/p2-consolidated | evidence: STATUS pass/full, 6 P2 branches had zero unique commits (all == 022f8cd, work carried in tree), fresh branch at baseline + carried tree committed, lint/test(295x2)/build/compose/docker-build+curl-200/nextjs-user green, catalog 104/104, no PR/merge/push/VPS
 
 ## Done log (optional, one line)
