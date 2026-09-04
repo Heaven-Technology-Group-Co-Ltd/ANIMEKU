@@ -1,4 +1,7 @@
-"use client";
+// P2.6: server component (was "use client"). Pure render only — no hooks,
+// no browser APIs — so /anime/[slug] + /watch/[slug]/[episode] no longer ship
+// its JS to the client. Props are plain serializable data; getLegalPlatforms
+// is a pure function; lucide icons render server-side.
 import type { Anime } from "@/lib/data";
 import { getLegalPlatforms } from "@/lib/platforms";
 import { Search, ExternalLink, ShieldCheck } from "lucide-react";

@@ -1,17 +1,38 @@
+# dependencies
 node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# next.js build output
 .next
+out
+build
+coverage
+.nyc_output
+
+# git
 .git
 .gitignore
-Dockerfile
+.github
+
+# docker
+Dockerfile*
 .dockerignore
-README.md
-npm-debug.log*
+
+# env — never bake secrets / local env into build context
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-coverage
-.nyc_output
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+.vercel
 .vscode
 .idea
-*.log

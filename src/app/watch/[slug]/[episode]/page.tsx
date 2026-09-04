@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getAnimeBySlug, animes } from "@/lib/data";
-import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
-import { videoJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { getRelated, animes } from "@/lib/data";
+import { resolveAnime as resolveAnimeShared } from "@/lib/resolve-anime";
+import { videoJsonLd, breadcrumbJsonLd, buildCanonicalUrl } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Eye } from "lucide-react";
@@ -14,17 +14,7 @@ import { getSiteUrl } from "@/lib/env";
 import { resolveTrailerDub } from "@/lib/dubMap";
 
 async function resolveAnime(slug: string) {
-  const local = getAnimeBySlug(slug);
-  if (local) return local;
-  const id = Number(slug.split("-")[0]);
-  if (isNaN(id) || id <= 0) return null;
-  try {
-    const ani = await getAnimeByIdAni(id);
-    if (ani) return toAnime(ani);
-  } catch (err) {
-    console.error(`[watch] AniList fallback failed for slug="${slug}"`, err);
-  }
-  return null;
+  return resolveAnimeShared(slug, "[watch]");
 }
 
 export async function generateStaticParams() {
@@ -36,10 +26,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const anime = await resolveAnime(slug);
   if (!anime) return {};
+  // P2.5: absolute canonical from the P2.1 env origin (overrides layout "/" default).
+  const canonical = buildCanonicalUrl(getSiteUrl(), `/watch/${anime.slug}/1`);
   return {
     title: `แนะนำ ${anime.titleTh} — ดูตัวอย่างแนะนำ | ANIMEKU`,
     description: `แนะนำ ${anime.titleTh} — ${anime.description.slice(0, 120)} • ดูตัวอย่างแนะนำก่อนตัดสินใจ`,
-    openGraph: { title: `แนะนำ ${anime.titleTh} — ตัวอย่างแนะนำ`, images: [anime.cover] },
+    alternates: { canonical },
+    openGraph: { title: `แนะนำ ${anime.titleTh} — ตัวอย่างแนะนำ`, url: canonical, images: [anime.cover] },
   };
 }
 
@@ -52,7 +45,7 @@ export default async function WatchPage({ params }: { params: Promise<{ slug: st
   const siteUrl = getSiteUrl();
   // P1.5: พากย์ไทยแสดงได้เฉพาะรายการที่ยืนยันใน dubMap เท่านั้น
   const dub = resolveTrailerDub(anime);
-  const related = animes.filter((a) => a.id !== anime.id).slice(0, 4);
+  const related = getRelated(anime, 4);
 
   // สร้าง ep จำลองสำหรับ Trailer โดยเฉพาะ
   const ep = {
