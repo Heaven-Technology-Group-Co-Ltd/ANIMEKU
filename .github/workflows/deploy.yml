@@ -49,6 +49,17 @@ jobs:
                 LEDGER_BACKUP="/tmp/prod-LEDGER-backup.md"
                 cp docs/LEDGER.md "$LEDGER_BACKUP"
                 echo "Backed up docs/LEDGER.md to $LEDGER_BACKUP."
+                # Neutralize ONLY the tolerated ledger file so checkout/reset can
+                # proceed: backup already saved above; this handles both worktree
+                # (" M") and staged ("M "/"MM") modifications without touching
+                # any other path. Fail-closed: abort if backup missing or
+                # neutralize fails (set -e aborts on restore failure).
+                if [ ! -f "$LEDGER_BACKUP" ]; then
+                  echo "ERROR: ledger backup missing at $LEDGER_BACKUP — refusing to neutralize."
+                  exit 1
+                fi
+                git restore --source=HEAD --staged --worktree -- docs/LEDGER.md
+                echo "Neutralized docs/LEDGER.md (exact file only) for checkout/reset; backup preserved."
               else
                 echo "ERROR: Production working tree is dirty."
                 echo "$BLOCKERS"
@@ -65,7 +76,13 @@ jobs:
             # Preserve production-local ledger drift across the reset above:
             # without this restore, `reset --hard` would silently discard the
             # tolerated docs/LEDGER.md modification. Never discard automatically.
-            if [ -n "${LEDGER_BACKUP:-}" ] && [ -f "$LEDGER_BACKUP" ]; then
+            # Fail-closed: if a backup was expected but is missing, abort rather
+            # than deploying without the production-local ledger.
+            if [ -n "${LEDGER_BACKUP:-}" ]; then
+              if [ ! -f "$LEDGER_BACKUP" ]; then
+                echo "ERROR: expected ledger backup missing at $LEDGER_BACKUP — refusing to continue without restore."
+                exit 1
+              fi
               cp "$LEDGER_BACKUP" docs/LEDGER.md
               echo "Restored production-local docs/LEDGER.md from backup (deploy does not discard ledger drift)."
             fi

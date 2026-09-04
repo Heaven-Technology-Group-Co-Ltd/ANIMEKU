@@ -5,11 +5,15 @@
  * EXCEPT the single documented documentation-only drift
  * `M docs/LEDGER.md` (operational project ledger, VPS-local session appends).
  *
+ * The tolerated ledger path is BACKUP -> VERIFY BACKUP -> NEUTRALIZE exact
+ * file -> CHECKOUT/RESET -> RESTORE. Checkout while the tracked file is still
+ * modified aborts, so neutralization of ONLY docs/LEDGER.md is required.
+ *
  * These tests pin that contract without touching a VPS, without network,
  * and without git state: they drive `scripts/check-production-working-tree.sh`
  * with fixture porcelain inputs and assert the inline gate in
  * `.github/workflows/deploy.yml` mirrors the same exact allowlist plus
- * backup/restore (never discard ledger drift via `reset --hard`).
+ * backup/verify/neutralize/restore (never discard ledger drift via `reset --hard`).
  *
  * Exit-code contract of the helper (and the inline gate semantics):
  *   0  -> clean (proceed)
@@ -129,10 +133,11 @@ describe("helper script stays narrow (no broad bypass baked in)", () => {
     expect(code).not.toContain("*.md");
   });
 
-  it("never mutates the tree itself (no reset/checkout/clean)", () => {
+  it("never mutates the tree itself (no reset/checkout/clean/restore)", () => {
     expect(script).not.toMatch(/git reset/);
     expect(script).not.toMatch(/git checkout/);
     expect(script).not.toMatch(/git clean/);
+    expect(script).not.toMatch(/git restore/);
   });
 });
 
@@ -185,5 +190,72 @@ describe("deploy.yml inline gate mirrors the helper (fail-closed + preserve)", (
     expect(deploy).toContain("git fetch origin main");
     expect(deploy).toContain("git checkout main");
     expect(deploy).toContain("git reset --hard origin/main");
+  });
+
+  it("neutralizes ONLY the exact ledger file before checkout (handles staged + worktree)", () => {
+    // Exact safe mechanism covering both worktree (" M") and staged ("M "/"MM").
+    expect(deploy).toContain(
+      "git restore --source=HEAD --staged --worktree -- docs/LEDGER.md",
+    );
+  });
+
+  it("orders BACKUP -> VERIFY -> NEUTRALIZE -> CHECKOUT -> RESET -> RESTORE", () => {
+    const backupCpIdx = deploy.indexOf('cp docs/LEDGER.md "$LEDGER_BACKUP"');
+    const verifyIdx = deploy.indexOf(
+      "ledger backup missing at $LEDGER_BACKUP",
+    );
+    const neutralizeIdx = deploy.indexOf(
+      "git restore --source=HEAD --staged --worktree -- docs/LEDGER.md",
+    );
+    const checkoutIdx = deploy.indexOf("git checkout main");
+    const resetIdx = deploy.indexOf("git reset --hard origin/main");
+    const restoreCpIdx = deploy.indexOf('cp "$LEDGER_BACKUP" docs/LEDGER.md');
+    for (const idx of [
+      backupCpIdx,
+      verifyIdx,
+      neutralizeIdx,
+      checkoutIdx,
+      resetIdx,
+      restoreCpIdx,
+    ]) {
+      expect(idx).toBeGreaterThan(0);
+    }
+    expect(verifyIdx).toBeGreaterThan(backupCpIdx);
+    expect(neutralizeIdx).toBeGreaterThan(verifyIdx);
+    expect(checkoutIdx).toBeGreaterThan(neutralizeIdx);
+    expect(resetIdx).toBeGreaterThan(checkoutIdx);
+    expect(restoreCpIdx).toBeGreaterThan(resetIdx);
+  });
+
+  it("fails closed when the expected backup is missing (no silent continuation)", () => {
+    expect(deploy).toContain(
+      "ERROR: ledger backup missing at $LEDGER_BACKUP",
+    );
+    expect(deploy).toContain(
+      "ERROR: expected ledger backup missing at $LEDGER_BACKUP",
+    );
+    // Both missing-backup guards must abort the deploy (set -e alone is not
+    // enough for the skipped-restore case).
+    const firstGuard = deploy.indexOf("refusing to neutralize.");
+    const secondGuard = deploy.indexOf(
+      "refusing to continue without restore.",
+    );
+    expect(firstGuard).toBeGreaterThan(0);
+    expect(secondGuard).toBeGreaterThan(0);
+  });
+
+  it("neutralization stays exact: no broad restore, no clean, no early reset", () => {
+    const code = codeOnly(deploy);
+    // Exact file only — never a directory-wide restore.
+    expect(code).not.toContain("git restore .");
+    expect(code).not.toMatch(/git restore --source=HEAD --staged --worktree -- \./);
+    // No untracked-file deletion and no reset before the backup exists.
+    expect(code).not.toMatch(/git clean/);
+    const backupCpIdx = code.indexOf('cp docs/LEDGER.md "$LEDGER_BACKUP"');
+    const resetIdx = code.indexOf("git reset --hard origin/main");
+    expect(backupCpIdx).toBeGreaterThan(0);
+    expect(resetIdx).toBeGreaterThan(backupCpIdx);
+    // Single hard reset (the sync one); no pre-backup discard.
+    expect(code.match(/git reset --hard/g)?.length).toBe(1);
   });
 });
