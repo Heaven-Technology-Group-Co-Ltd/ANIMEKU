@@ -82,10 +82,23 @@ describe("compose image/tag strategy matches deploy (P2.1-b)", () => {
   });
 
   it("deploy preserves health verification, diagnostics, dirty-tree protection", () => {
-    expect(deploy).toContain("git diff --quiet");
+    // Fail-closed porcelain gate (replaces quiet git diff checks): a dirty
+    // tree must print a visible error and exit non-zero before sync.
+    expect(deploy).toContain("git status --porcelain");
+    expect(deploy).toContain("ERROR: Production working tree is dirty.");
+    expect(deploy).toContain("git status --short");
+    expect(deploy).toContain("Working tree clean");
+    expect(deploy).not.toContain("git diff --quiet");
     expect(deploy).toContain("/api/health");
     expect(deploy).toContain("docker logs --tail 100 webanime-app");
     expect(deploy).toContain("docker compose ps");
+  });
+
+  it("deploy uses only supported ssh-action inputs with fail-fast shell", () => {
+    // appleboy/ssh-action has no `script_stop` input — failure semantics
+    // come from `set -e` as the first script line instead.
+    expect(deploy).not.toContain("script_stop");
+    expect(deploy).toMatch(/script:\s*\|\s*\n\s*set -e/);
   });
 
   it("deploy loads production env before build (no localhost bake by default)", () => {
