@@ -24,15 +24,19 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
 
             cd /home/ec2-user/project/webanime
 
             echo "==> Checking working tree..."
-            git diff --quiet
-            git diff --cached --quiet
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "ERROR: Production working tree is dirty."
+              git status --short
+              exit 1
+            else
+              echo "==> Working tree clean."
+            fi
 
             echo "==> Syncing main..."
             git fetch origin main
