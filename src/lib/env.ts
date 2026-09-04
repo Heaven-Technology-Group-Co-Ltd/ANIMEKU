@@ -16,10 +16,27 @@ const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"])
  * loopback set stores the bare form ("::1"). Normalize before lookup so an
  * IPv6-loopback bake is flagged exactly like 127.0.0.1. Pure, no behavior
  * change for any currently-handled input.
+ *
+ * PR #10 review: also treat the full 127.0.0.0/8 range, `*.localhost`,
+ * and `*.local` single-host dev names as loopback-local (fail in prod).
+ * `example.com` stays PASS — only the `.local` / `.localhost` suffixes and
+ * the 127/8 range are added, no prod-domain hard-coding.
  */
 function isLoopbackHostname(hostname: string): boolean {
-  const bare = hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  return LOOPBACK_HOSTNAMES.has(bare);
+  const bare = hostname
+    .replace(/^\[|\]$/g, "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+  if (LOOPBACK_HOSTNAMES.has(bare)) return true;
+  // Entire 127.0.0.0/8 is loopback per RFC 1122 (127.0.0.2, 127.1, etc.).
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(bare)) return true;
+  // IPv4-mapped IPv6 loopback (WHATWG may present as ::ffff:127.0.0.1).
+  if (bare.includes("127.0.0.1")) return true;
+  if (bare === "::ffff:127.0.0.1" || bare === "[::ffff:127.0.0.1]") return true;
+  // localhost subdomains (app.localhost) and mDNS/dev names (mybox.local).
+  if (bare === "localhost" || bare.endsWith(".localhost")) return true;
+  if (bare === "local" || bare.endsWith(".local")) return true;
+  return false;
 }
 
 function isProd(): boolean {
@@ -50,6 +67,42 @@ export function isPublicOriginProductionReady(raw: string | undefined): boolean 
  */
 export function isProductionPublicConfigValid(): boolean {
   return isProd() && isPublicOriginProductionReady(process.env.NEXT_PUBLIC_SITE_URL);
+}
+
+/**
+ * PR #10 review: fail-loud production validator (pure, no NODE_ENV check).
+ * Throws on missing/empty/invalid-URL/unsupported-protocol/loopback-local
+ * (localhost, 127.0.0.1, 127/8, 0.0.0.0, ::1, *.localhost, *.local).
+ * Returns the canonical origin on valid http(s) production URLs.
+ * Dev/test callers keep using getSiteUrl() (quiet fallback); deploy gates
+ * and build guards call this to refuse a localhost bake.
+ */
+export function assertProductionPublicConfig(raw?: string): string {
+  const value = (raw ?? process.env.NEXT_PUBLIC_SITE_URL)?.trim();
+  if (!value) {
+    throw new Error(
+      "[env] NEXT_PUBLIC_SITE_URL is required in production — set it to your canonical origin (e.g. https://example.com)."
+    );
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(
+      `[env] NEXT_PUBLIC_SITE_URL invalid: "${value}" — expected absolute URL like https://example.com`
+    );
+  }
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error(
+      `[env] NEXT_PUBLIC_SITE_URL has unsupported protocol "${url.protocol}" — expected http(s).`
+    );
+  }
+  if (isLoopbackHostname(url.hostname)) {
+    throw new Error(
+      `[env] NEXT_PUBLIC_SITE_URL is "${value}" but hostname is loopback/local in production — expected absolute production origin.`
+    );
+  }
+  return url.origin;
 }
 
 export function getSiteUrl(): string {
