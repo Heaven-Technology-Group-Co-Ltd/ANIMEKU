@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getSiteUrl, getHlsBaseUrl } from "@/lib/env";
+import {
+  getSiteUrl,
+  getHlsBaseUrl,
+  isPublicOriginProductionReady,
+  isProductionPublicConfigValid,
+} from "@/lib/env";
 
 const ORIGINAL_ENV = process.env;
 
@@ -10,6 +15,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = ORIGINAL_ENV;
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
@@ -42,6 +48,79 @@ describe("getSiteUrl", () => {
   it("trims whitespace", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "  https://animeku.example.com  ";
     expect(getSiteUrl()).toBe("https://animeku.example.com");
+  });
+
+  // P2.1: production branches — prod values must resolve with no localhost.
+  it("production: real prod origin resolves verbatim (no localhost)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.env.NEXT_PUBLIC_SITE_URL = "https://animeku.example.com";
+    expect(getSiteUrl()).toBe("https://animeku.example.com");
+    expect(err).not.toHaveBeenCalled();
+  });
+
+  it("production: missing value still falls back but logs loudly (no silent fallback)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    expect(getSiteUrl()).toBe("http://localhost:1234");
+    expect(err).toHaveBeenCalled();
+  });
+
+  it("production: localhost-baked value is flagged loudly", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:1234";
+    expect(getSiteUrl()).toBe("http://localhost:1234");
+    expect(err).toHaveBeenCalled();
+  });
+
+  it("dev localhost fallback stays valid and quiet", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    expect(getSiteUrl()).toBe("http://localhost:1234");
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:1234";
+    expect(getSiteUrl()).toBe("http://localhost:1234");
+    expect(err).not.toHaveBeenCalled();
+  });
+});
+
+describe("isPublicOriginProductionReady", () => {
+  it("accepts absolute non-loopback origins", () => {
+    expect(isPublicOriginProductionReady("https://animeku.example.com")).toBe(true);
+    expect(isPublicOriginProductionReady("https://animeku.example.com/")).toBe(true);
+  });
+
+  it("rejects missing/invalid/loopback values", () => {
+    expect(isPublicOriginProductionReady(undefined)).toBe(false);
+    expect(isPublicOriginProductionReady("")).toBe(false);
+    expect(isPublicOriginProductionReady("not-a-url")).toBe(false);
+    expect(isPublicOriginProductionReady("ftp://example.com")).toBe(false);
+    expect(isPublicOriginProductionReady("http://localhost:1234")).toBe(false);
+    expect(isPublicOriginProductionReady("http://127.0.0.1:1234")).toBe(false);
+  });
+});
+
+describe("isProductionPublicConfigValid", () => {
+  it("true only for production + real origin (supplied prod values, no localhost)", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.NEXT_PUBLIC_SITE_URL = "https://animeku.example.com";
+    expect(isProductionPublicConfigValid()).toBe(true);
+  });
+
+  it("false for localhost-baked or missing prod config", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:1234";
+    expect(isProductionPublicConfigValid()).toBe(false);
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    expect(isProductionPublicConfigValid()).toBe(false);
+  });
+
+  it("false outside production (dev localhost fallback is intended, not a failure)", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    process.env.NEXT_PUBLIC_SITE_URL = "https://animeku.example.com";
+    expect(isProductionPublicConfigValid()).toBe(false);
   });
 });
 

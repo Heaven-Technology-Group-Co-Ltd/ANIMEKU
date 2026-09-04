@@ -135,7 +135,12 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId,
     };
   }, [destroyPlayer]);
 
-  // Fetch caption tracks for active video
+  // Fetch caption tracks for active video — once per video (P2.6: `playing`
+  // removed from deps; it re-fetched /api/youtube/captions on every
+  // play/pause toggle, each fanning out to up to 3 YouTube upstream fetches
+  // server-side. Tracks are per-video state, so per-video fetching is the
+  // identical-output behavior. The fire-and-forget no-cors timedtext fetch on
+  // empty results is also removed: opaque response, discarded, zero UI effect.)
   useEffect(() => {
     if (!activeId) {
       // Defer synchronous state update to avoid react-hooks/set-state-in-effect
@@ -158,15 +163,14 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId,
           const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
           setSelectedCaption(pick);
         } else {
-          fetch(`https://www.youtube.com/api/timedtext?type=list&v=${activeId}`, { mode: "no-cors" }).catch(() => {});
-          if (!playing) setCaptionTracks([]);
+          setCaptionTracks([]);
         }
       })
       .catch(() => {
-        if (!cancelled && mountedRef.current && !playing) setCaptionTracks([]);
+        if (!cancelled && mountedRef.current) setCaptionTracks([]);
       });
     return () => { cancelled = true; };
-  }, [activeId, playing]);
+  }, [activeId]);
 
   // Disable CC by default when no tracks — deferred to avoid synchronous setState in effect
   useEffect(() => {

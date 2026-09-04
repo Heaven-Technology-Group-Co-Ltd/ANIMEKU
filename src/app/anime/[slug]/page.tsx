@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getAnimeBySlug, animes } from "@/lib/data";
-import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
-import { animeJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { getRelated, animes } from "@/lib/data";
+import { resolveAnime as resolveAnimeShared } from "@/lib/resolve-anime";
+import { animeJsonLd, breadcrumbJsonLd, buildCanonicalUrl } from "@/lib/seo";
 import TrailerPlayer from "@/components/TrailerPlayer";
 import { AnimeCard } from "@/components/AnimeCard";
 import { Star, Calendar, Clock, Play } from "lucide-react";
@@ -13,17 +13,7 @@ import { getSiteUrl } from "@/lib/env";
 import { resolveTrailerDub } from "@/lib/dubMap";
 
 async function resolveAnime(slug: string) {
-  const local = getAnimeBySlug(slug);
-  if (local) return local;
-  const id = Number(slug.split("-")[0]);
-  if (isNaN(id) || id <= 0) return null;
-  try {
-    const ani = await getAnimeByIdAni(id);
-    if (ani) return toAnime(ani);
-  } catch (err) {
-    console.error(`[anime] AniList fallback failed for slug="${slug}"`, err);
-  }
-  return null;
+  return resolveAnimeShared(slug, "[anime]");
 }
 
 export async function generateStaticParams() {
@@ -34,10 +24,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const anime = await resolveAnime(slug);
   if (!anime) return {};
+  // P2.5: absolute canonical from the P2.1 env origin (overrides layout "/" default).
+  const canonical = buildCanonicalUrl(getSiteUrl(), `/anime/${anime.slug}`);
   return {
     title: `แนะนำ ${anime.titleTh} — รีวิว จัดอันดับ ดูตัวอย่างแนะนำ | ANIMEKU`,
     description: `แนะนำ ${anime.titleTh} — ${anime.description.slice(0, 130)} • รีวิว จัดอันดับ แนะนำอนิเมะถูกลิขสิทธิ์`,
-    openGraph: { title: `แนะนำ ${anime.titleTh}`, description: anime.description.slice(0, 155), images: [anime.cover] },
+    alternates: { canonical },
+    openGraph: { title: `แนะนำ ${anime.titleTh}`, description: anime.description.slice(0, 155), url: canonical, images: [anime.cover] },
   };
 }
 
@@ -117,7 +110,7 @@ export default async function AnimePage({ params }: { params: Promise<{ slug: st
         </div>
         <h2 className="mt-10 mb-4 text-lg font-bold text-white">เรื่องที่คล้ายกัน</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {animes.filter((a) => a.id !== anime.id).slice(0, 6).map((a) => (
+          {getRelated(anime, 6).map((a) => (
             <AnimeCard key={a.id} anime={a} />
           ))}
         </div>

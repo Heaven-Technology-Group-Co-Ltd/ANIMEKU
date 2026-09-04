@@ -1,4 +1,6 @@
 // AniList Live fetcher (ISR 1 ชม.)
+import { fetchWithTimeout, FETCH_TIMEOUTS_MS } from "./fetch-timeout";
+
 const ANILIST_URL = "https://graphql.anilist.co";
 
 export type AniAnime = {
@@ -31,12 +33,17 @@ query($page: Int, $perPage: Int, $genre: String, $search: String, $sort: [MediaS
 `;
 
 async function gql(query: string, variables: Record<string, unknown>) {
-  const res = await fetch(ANILIST_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ query, variables }),
-    next: { revalidate: 3600 }, // ISR 1h
-  });
+  // P2.2: bounded upstream wait; callers degrade gracefully on throw.
+  const res = await fetchWithTimeout(
+    ANILIST_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ query, variables }),
+      next: { revalidate: 3600 }, // ISR 1h
+    },
+    FETCH_TIMEOUTS_MS.anilist,
+  );
   if (!res.ok) throw new Error(`AniList ${res.status}`);
   const j = await res.json();
   if (j.errors) throw new Error(j.errors[0].message);
@@ -143,18 +150,6 @@ export function toAnime(a: AniAnime, rank?: number): Anime {
   };
 }
 
-export const CATEGORY_THAI = [
-  "ทั้งหมด",
-  "แอคชั่น",
-  "ผจญภัย",
-  "แฟนตาซี",
-  "ดราม่า",
-  "คอมเมดี้",
-  "ไซไฟ",
-  "โรงเรียน",
-  "โรแมนติก",
-  "เหนือธรรมชาติ",
-  "สยองขวัญ",
-  "กีฬา",
-  "ดนตรี",
-] as const;
+// P2.3 ARCH-04: canonical category source is `./genres`.
+// Re-exported here so existing `@/lib/anilist` import paths keep working.
+export { categories as CATEGORY_THAI } from "./genres";

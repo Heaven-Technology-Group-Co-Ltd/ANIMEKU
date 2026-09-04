@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
-import { filterByCategory, categories } from "@/lib/data";
+import type { Metadata } from "next";
+import { filterByCategory, categories, getAnilistGenreForThai } from "@/lib/data";
 import { getTopAnime, toAnime, CATEGORY_THAI } from "@/lib/anilist";
 import { AnimeCard } from "@/components/AnimeCard";
 import CategoryPills from "@/components/CategoryPills";
+import { getSiteUrl } from "@/lib/env";
+import { buildCanonicalUrl } from "@/lib/seo";
 
 export const revalidate = 3600;
 
@@ -10,22 +13,24 @@ export async function generateStaticParams() {
   return categories.map((c) => ({ slug: encodeURIComponent(c) }));
 }
 
-// map ไทย -> AniList English genre
-const thaiToEn: Record<string, string | null> = {
-  ทั้งหมด: null,
-  แอคชั่น: "Action",
-  ผจญภัย: "Adventure",
-  แฟนตาซี: "Fantasy",
-  ดราม่า: "Drama",
-  คอมเมดี้: "Comedy",
-  ไซไฟ: "Sci-Fi",
-  โรงเรียน: "School",
-  โรแมนติก: "Romance",
-  เหนือธรรมชาติ: "Supernatural",
-  สยองขวัญ: "Horror",
-  กีฬา: "Sports",
-  ดนตรี: "Music",
-};
+// P2.3 ARCH-04: Thai -> AniList genre mapping is canonical in `@/lib/genres`
+// (re-exported via `@/lib/data`). No local copy — same 13 labels + mappings.
+
+// P2.5: category pages had no metadata (title fell back to the layout default
+// and canonical fell back to layout "/"). Same-entity title/desc + absolute
+// canonical from the P2.1 env origin.
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = decodeURIComponent(slug);
+  if (!(categories as readonly string[]).includes(cat)) return {};
+  const canonical = buildCanonicalUrl(getSiteUrl(), `/category/${encodeURIComponent(cat)}`);
+  return {
+    title: `หมวดหมู่${cat} — แนะนำอนิเมะ${cat} | ANIMEKU`,
+    description: `แนะนำอนิเมะแนว${cat} รีวิว จัดอันดับ ดูตัวอย่างแนะนำก่อนตัดสินใจ`,
+    alternates: { canonical },
+    openGraph: { title: `หมวดหมู่: ${cat}`, description: `แนะนำอนิเมะแนว${cat}`, url: canonical },
+  };
+}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -37,7 +42,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   let extra: ReturnType<typeof toAnime>[] = [];
 
   // ดึงสดจาก AniList ตาม genre (ยกเว้น ทั้งหมด) — graceful degrade
-  const enGenre = thaiToEn[cat];
+  const enGenre = getAnilistGenreForThai(cat);
   if (enGenre) {
     try {
       const live = await getTopAnime(24, enGenre);

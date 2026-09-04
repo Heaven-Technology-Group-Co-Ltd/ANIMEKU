@@ -1,3 +1,16 @@
+/**
+ * P2.3 ARCH-06 compat-shim audit (no consumer breakage, no removal in this slice).
+ *
+ * | Shim | Consumers (grep) | Verdict |
+ * |------|------------------|---------|
+ * | `PlatformInfo.available` | tests only (`platforms.test.ts` asserts `available === verified`); `LegalPlatforms.tsx` uses `verified` | KEEP — deprecated alias, zero runtime cost. Removal condition: major cleanup after verified-licensing data exists + callers migrated to `verified`. |
+ * | `PlatformInfo.searchUrl()` | none in `src/` (only constructed in `getLegalPlatforms`, asserted in tests) | KEEP — backwards-compat accessor returning the same deterministic `url`. Removal condition: delete when no external/CMS consumer needs the function form (use `url` directly). |
+ * | `LegalPlatform` type alias | none in `src/` (tests + possible external imports) | KEEP — type-only alias for `PlatformInfo`. Removal condition: rename callers to `PlatformInfo`, then drop alias. |
+ * | `getAvailablePlatforms()` | tests only; `src/` uses `getLegalPlatforms`/`getVerifiedPlatforms` | KEEP — deprecated alias of `getVerifiedPlatforms`. Removal condition: migrate tests/callers to `getVerifiedPlatforms`, then delete. |
+ *
+ * None of the shims are safe to delete in P2.3 without breaking the existing
+ * test contract; all are documented with removal conditions above.
+ */
 import type { Anime } from "./data";
 
 export type PlatformId = "youtube" | "bilibili" | "iqiyi" | "crunchyroll" | "netflix" | "prime";
@@ -15,13 +28,20 @@ export type PlatformInfo = {
   /**
    * @deprecated Use `verified` instead. Kept for backwards compatibility — equals `verified`.
    * `available` historically reflected heuristic availability; now it mirrors `verified` to avoid misleading claims.
+   * Removal condition: delete after callers/tests migrate to `verified` (see ARCH-06 audit header).
    */
   available: boolean;
-  /** Function that returns the same deterministic URL (kept for backwards compatibility). */
+  /**
+   * Function that returns the same deterministic URL (kept for backwards compatibility).
+   * Prefer `url` directly. Removal condition: delete when no consumer needs the function form.
+   */
   searchUrl: (anime: Anime) => string;
 };
 
-/** Backwards-compatible alias — prefer `PlatformInfo`. */
+/**
+ * Backwards-compatible alias — prefer `PlatformInfo`.
+ * Removal condition: rename callers to `PlatformInfo`, then drop this alias.
+ */
 export type LegalPlatform = PlatformInfo;
 
 /**
@@ -140,6 +160,7 @@ export function getVerifiedPlatforms(anime: Anime): PlatformInfo[] {
 /**
  * @deprecated Use `getVerifiedPlatforms` instead. Kept for backwards compatibility.
  * Historically returned heuristic availability; now returns verified platforms only.
+ * Removal condition: migrate remaining callers/tests, then delete (see ARCH-06 audit header).
  */
 export function getAvailablePlatforms(anime: Anime): PlatformInfo[] {
   return getVerifiedPlatforms(anime);

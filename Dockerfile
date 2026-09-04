@@ -3,16 +3,26 @@ FROM node:22-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# 1. Install dependencies
+# 1. Install dependencies (P2.6: --no-audit/--no-fund skip advisory/funding
+# lookups — identical node_modules, faster + quieter layer rebuilds).
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 # 2. Build Next.js
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# NEXT_PUBLIC_* are embedded into client JS at build time (not readable from
+# container runtime). They must be supplied as build args so production builds
+# bake the real origin instead of the localhost fallback.
+# Compose passes these through from the VPS .env / shell environment.
+# Local default (empty) preserves dev-usable localhost fallback.
+ARG NEXT_PUBLIC_SITE_URL=""
+ARG NEXT_PUBLIC_HLS_BASE_URL=""
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_HLS_BASE_URL=${NEXT_PUBLIC_HLS_BASE_URL}
 # Ensure next.config has no output:standalone needed for this simple copy strategy
 RUN npm run build
 

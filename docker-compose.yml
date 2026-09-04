@@ -1,6 +1,18 @@
 services:
   webanime:
-    build: .
+    # Real image name — required so `docker image inspect webanime:latest`
+    # (used by the deploy rollback path) resolves to the currently deployed
+    # image. Previously no `image:` key existed, so compose tagged the build
+    # as <project>-webanime and every rollback lookup was a silent no-op.
+    image: webanime:latest
+    build:
+      context: .
+      args:
+        # Build-time embed for client JS (see Dockerfile). Resolved from the
+        # VPS .env / shell at `docker compose up --build` time. Empty default
+        # keeps local dev usable (localhost fallback in src/lib/env.ts).
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+        NEXT_PUBLIC_HLS_BASE_URL: ${NEXT_PUBLIC_HLS_BASE_URL:-}
     container_name: webanime-app
     ports:
       - "1234:1234"
@@ -8,6 +20,11 @@ services:
       - NODE_ENV=production
       - PORT=1234
       - HOSTNAME=0.0.0.0
+      # Runtime passthrough for server-evaluated paths (layout metadataBase,
+      # robots, sitemap call getSiteUrl() per request). Does NOT fix already-
+      # baked client JS — that requires the build args above.
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-}
+      - NEXT_PUBLIC_HLS_BASE_URL=${NEXT_PUBLIC_HLS_BASE_URL:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:1234/api/health | grep -q '\"status\":\"ok\"' || exit 1"]

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Play, Pause, Volume2, VolumeX, Maximize2, Settings2 } from "lucide-react";
-import { HLS_BASE } from "@/lib/data";
+import { getHlsBaseUrl, resolveHlsUrl } from "@/lib/env";
 
 export default function VideoPlayer({
   title,
@@ -27,11 +27,14 @@ export default function VideoPlayer({
   const [isNativeHls, setIsNativeHls] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Resolve final HLS URL: env R2 > per-episode > fallback
-  const resolvedUrl =
-    (HLS_BASE && animeSlug && episodeNumber ? `${HLS_BASE}/${animeSlug}/ep-${episodeNumber}/master.m3u8` : null) ||
-    hlsUrl ||
-    "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+  // P2.3 ARCH-05: validated HLS base only — invalid env values fall through
+  // to per-episode/demo instead of building a broken URL. Same precedence as before.
+  const resolvedUrl = resolveHlsUrl({
+    hlsBase: getHlsBaseUrl(),
+    animeSlug,
+    episodeNumber,
+    hlsUrl,
+  });
 
   useEffect(() => {
     const video = videoRef.current;

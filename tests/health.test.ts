@@ -77,4 +77,14 @@ describe("GET /api/health", () => {
     expect(j1.status).toBe(j2.status);
     expect(j1.service).toBe(j2.service);
   });
+
+  it("serializes with compact status ok (docker healthcheck grep contract)", async () => {
+    // P2.2 TEST-07: Dockerfile + compose grep the serialized bytes for
+    // '"status":"ok"'. Pretty-printing would pass the JSON tests above yet
+    // break healthchecks, so assert on the serialized form (compact default).
+    const res = await GET();
+    const text = JSON.stringify(await res.json());
+    expect(text).toContain('"status":"ok"');
+    expect(text).not.toContain("\n");
+  });
 });

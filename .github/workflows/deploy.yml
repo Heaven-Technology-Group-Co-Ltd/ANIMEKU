@@ -40,8 +40,31 @@ jobs:
             git reset --hard origin/main
 
             echo "==> Saving current image for rollback..."
+            # webanime:latest is the real compose image (see docker-compose.yml
+            # `image:` key), so this tag preserves the currently deployed image.
             if docker image inspect webanime:latest >/dev/null 2>&1; then
               docker tag webanime:latest webanime:rollback
+              echo "Saved rollback image: $(docker image inspect --format '{{.Id}}' webanime:rollback)"
+            else
+              echo "WARNING: no webanime:latest image found — nothing to roll back to."
+            fi
+
+            echo "==> Loading production env for build..."
+            # NEXT_PUBLIC_* are baked into client JS at `docker build` time.
+            # The VPS .env must define the real NEXT_PUBLIC_SITE_URL before
+            # deploy; compose build.args forward it (see docker-compose.yml).
+            # No new secrets are introduced — same file compose already reads.
+            set -a
+            if [ -f .env ]; then
+              # shellcheck disable=SC1091
+              . ./.env
+              echo "Loaded .env (NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-<unset>})."
+            else
+              echo "WARNING: no .env file — build will bake localhost fallback."
+            fi
+            set +a
+            if [ -z "${NEXT_PUBLIC_SITE_URL:-}" ]; then
+              echo "WARNING: NEXT_PUBLIC_SITE_URL is empty — production build will bake localhost fallback."
             fi
 
             echo "==> Building and starting ANIMEKU..."
@@ -89,8 +112,32 @@ jobs:
             echo "Rolling back..."
 
             if docker image inspect webanime:rollback >/dev/null 2>&1; then
+              # Restore the previously deployed image WITHOUT --build so the
+              # broken tree is not rebuilt; then recreate the container from it.
               docker tag webanime:rollback webanime:latest
-              docker compose up -d --force-recreate
+              docker compose up -d --force-recreate --no-build
+
+              echo "==> Verifying rollback health..."
+              ROLLBACK_OK=0
+              for i in $(seq 1 15); do
+                if curl -fsS "$HEALTH_URL" 2>/dev/null | grep -q '"status":"ok"'; then
+                  echo "Rollback health passed (attempt $i/15)."
+                  ROLLBACK_OK=1
+                  break
+                fi
+                echo "Rollback attempt $i/15: not ready yet..."
+                sleep 2
+              done
+
+              if [ "$ROLLBACK_OK" = "1" ]; then
+                echo "ROLLBACK RESULT: restored webanime:rollback, container re-healthy."
+              else
+                echo "ROLLBACK RESULT: FAILED — restored image is not healthy. Diagnostics:"
+                docker logs --tail 100 webanime-app 2>&1 || true
+                docker compose ps 2>&1 || true
+              fi
+            else
+              echo "ROLLBACK RESULT: FAILED — no webanime:rollback image exists. Manual intervention required."
             fi
 
             exit 1

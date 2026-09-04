@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // P2.6: drop the X-Powered-By response header (bytes + hygiene, no UI/API/SEO change).
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "cdn.myanimelist.net" },

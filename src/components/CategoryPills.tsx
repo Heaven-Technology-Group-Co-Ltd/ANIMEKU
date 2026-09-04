@@ -1,4 +1,6 @@
-"use client";
+// P2.6: server component (was "use client"). Pure render only — no hooks,
+// no browser APIs — so every page that renders it (/, /category/[slug])
+// no longer ships its JS to the client. Link + cn are server-safe.
 import Link from "next/link";
 import { categories } from "@/lib/data";
 import { cn } from "@/lib/utils";
