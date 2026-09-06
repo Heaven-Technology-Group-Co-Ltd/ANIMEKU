@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  basePath: "/animeku",
   // P2.6: drop the X-Powered-By response header (bytes + hygiene, no UI/API/SEO change).
   poweredByHeader: false,
   images: {
