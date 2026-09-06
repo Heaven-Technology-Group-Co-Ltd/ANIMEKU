@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Share2, Bookmark, Subtitles, Check } from "lucide-react";
+import { useState } from "react";
+import { Play, Pause, Sparkles, Volume2, VolumeX, Maximize2, Subtitles, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCustomSubs, getActiveCue } from "@/lib/customSubs";
+import { getActiveCue } from "@/lib/customSubs";
 import { getDubInfo, getDubDisplayState, DUB_UNAVAILABLE_LABEL } from "@/lib/dubMap";
+import { useTrailerCaptions } from "./trailer-player/useTrailerCaptions";
+import { useYouTubePlayer } from "./trailer-player/useYouTubePlayer";
 
 type Props = {
   title: string;
@@ -21,41 +23,11 @@ type Props = {
 
 
 
-// Singleton promise for YT IFrame API — prevents duplicate script tags
-let ytApiPromise: Promise<void> | null = null;
-
-function loadYouTubeAPI(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.YT && window.YT.Player) return Promise.resolve();
-  if (ytApiPromise) return ytApiPromise;
-
-  const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
-  if (existingScript) {
-    // Script already inserted by another instance — wait for ready
-    ytApiPromise = new Promise((res) => {
-      const prev = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        prev?.();
-        res();
-      };
-      // If YT already ready after script load, resolve immediately
-      if (window.YT?.Player) res();
-    });
-    return ytApiPromise;
-  }
-
-  ytApiPromise = new Promise((res) => {
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      prev?.();
-      res();
-    };
-  });
-  return ytApiPromise;
-}
+// P3.2: thin composition over useTrailerCaptions (caption fetching/state)
+// + useYouTubePlayer (YT lifecycle/transport). Dub/mode/theater/poster
+// semantics, caption contracts, and player behavior are unchanged —
+// only the dead Watchlist/Share affordances (buttons without handlers)
+// are removed so the UI stays honest.
 
 export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId, dubVerified, thumbnail, animeSlug, hlsUrl }: Props) {
   const clean = (v?: string) => v?.trim();
@@ -69,33 +41,51 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId,
   const hasVerifiedDub =
     getDubDisplayState({ videoId: resolvedDubId, verified: resolvedVerified, mainTrailerId: youtubeIdClean }) === "verified";
   const [mode, setMode] = useState<"sub" | "dub">("sub");
-  const [playing, setPlaying] = useState(false);
   const [theater, setTheater] = useState(false);
-  const [isYTReady, setIsYTReady] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(80);
-  const [muted, setMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [captionTracks, setCaptionTracks] = useState<{ lang: string; name: string; isAuto: boolean }[]>([]);
-  const [selectedCaption, setSelectedCaption] = useState<string>("");
   const [showCaptionMenu, setShowCaptionMenu] = useState(false);
-  const [useCustomSub, setUseCustomSub] = useState(false);
-  const [subDelay, setSubDelay] = useState(0);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<unknown>(null);
-  const playerContainerId = `yt-player-${animeSlug}`;
-  const timerRef = useRef<number | null>(null);
-  const timeoutsRef = useRef<number[]>([]);
-  const mountedRef = useRef(true);
 
   const activeId = mode === "dub" && hasVerifiedDub && resolvedDubId ? resolvedDubId : youtubeIdClean;
   const hasYoutube = !!activeId;
   const showHlsFallback = !hasYoutube && !!hlsUrl;
-  const customCues = activeId ? getCustomSubs(activeId) : null;
-  const hasCustomSub = !!customCues && customCues.length > 0;
+  const playerContainerId = `yt-player-${animeSlug}`;
+
+  const {
+    captionTracks,
+    selectedCaption,
+    setSelectedCaption,
+    useCustomSub,
+    setUseCustomSub,
+    subDelay,
+    setSubDelay,
+    customCues,
+    hasCustomSub,
+    syncTracksFromPlayer,
+  } = useTrailerCaptions(activeId);
+
+  const {
+    containerRef,
+    playing,
+    setPlaying,
+    isPlaying,
+    current,
+    duration,
+    volume,
+    muted,
+    togglePlay,
+    handleSeek,
+    handleVolume,
+    toggleMute,
+    toggleFullscreen,
+    closePlayer,
+  } = useYouTubePlayer({
+    activeId,
+    hasYoutube,
+    playerContainerId,
+    selectedCaption,
+    useCustomSub,
+    syncTracksFromPlayer,
+  });
 
   const formatTime = (s: number) => {
     if (!s || isNaN(s)) return "0:00";
@@ -103,310 +93,6 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId,
     const sec = Math.floor(s % 60).toString().padStart(2, "0");
     return `${m}:${sec}`;
   };
-
-  const clearTimeouts = useCallback(() => {
-    timeoutsRef.current.forEach((id) => window.clearTimeout(id));
-    timeoutsRef.current = [];
-  }, []);
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
-
-  const destroyPlayer = useCallback(() => {
-    clearTimer();
-    clearTimeouts();
-    const p = playerRef.current as { destroy?: () => void } | null;
-    if (p?.destroy) {
-      try { p.destroy(); } catch {}
-    }
-    playerRef.current = null;
-  }, [clearTimer, clearTimeouts]);
-
-  // Track mounted to guard async setState
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      destroyPlayer();
-    };
-  }, [destroyPlayer]);
-
-  // Fetch caption tracks for active video — once per video (P2.6: `playing`
-  // removed from deps; it re-fetched /api/youtube/captions on every
-  // play/pause toggle, each fanning out to up to 3 YouTube upstream fetches
-  // server-side. Tracks are per-video state, so per-video fetching is the
-  // identical-output behavior. The fire-and-forget no-cors timedtext fetch on
-  // empty results is also removed: opaque response, discarded, zero UI effect.)
-  useEffect(() => {
-    if (!activeId) {
-      // Defer synchronous state update to avoid react-hooks/set-state-in-effect
-      const tid = window.setTimeout(() => {
-        if (!mountedRef.current) return;
-        setCaptionTracks([]);
-      }, 0);
-      return () => window.clearTimeout(tid);
-    }
-    let cancelled = false;
-    fetch(`/api/youtube/captions?v=${activeId}`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (cancelled || !mountedRef.current) return;
-        const tracks = (j.tracks || []) as { lang: string; name: string; isAuto: boolean }[];
-        if (tracks.length > 0) {
-          setCaptionTracks(tracks);
-          const hasTh = tracks.find((t) => t.lang === "th");
-          const hasEn = tracks.find((t) => t.lang === "en");
-          const pick = hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
-          setSelectedCaption(pick);
-        } else {
-          setCaptionTracks([]);
-        }
-      })
-      .catch(() => {
-        if (!cancelled && mountedRef.current) setCaptionTracks([]);
-      });
-    return () => { cancelled = true; };
-  }, [activeId]);
-
-  // Disable CC by default when no tracks — deferred to avoid synchronous setState in effect
-  useEffect(() => {
-    if (captionTracks.length === 0) {
-      const tid = window.setTimeout(() => {
-        if (!mountedRef.current) return;
-        if (hasCustomSub) {
-          setSelectedCaption("");
-          setUseCustomSub(false);
-        } else {
-          setSelectedCaption("");
-        }
-      }, 0);
-      return () => window.clearTimeout(tid);
-    }
-  }, [captionTracks.length, hasCustomSub]);
-
-  const syncTracksFromPlayer = useCallback(() => {
-    const p = playerRef.current as { getOption?: (a: string, b: string) => unknown } | null;
-    if (!p || typeof p.getOption !== "function") return;
-    try {
-      const list = p.getOption("captions", "tracklist") as { languageCode: string; displayName?: string; kind?: string }[];
-      if (Array.isArray(list) && list.length > 0) {
-        const tracks = list.map((t) => ({
-          lang: t.languageCode as string,
-          name: (t.displayName as string) || (t.languageCode as string),
-          isAuto: (t.kind as string) === "asr",
-        }));
-        if (!mountedRef.current) return;
-        setCaptionTracks((prev) => (prev.length === 0 || tracks.length > prev.length ? tracks : prev));
-        setSelectedCaption((prev) => {
-          if (prev) return prev;
-          const hasTh = tracks.find((t) => t.lang === "th");
-          const hasEn = tracks.find((t) => t.lang === "en");
-          return hasTh ? "th" : hasEn ? "en" : tracks[0].lang;
-        });
-      } else if (hasCustomSub && mountedRef.current) {
-        setSelectedCaption("");
-      }
-    } catch {}
-  }, [hasCustomSub]);
-
-  // Load YT API when entering playing state
-  useEffect(() => {
-    if (!playing || !hasYoutube) return;
-    let cancelled = false;
-    loadYouTubeAPI().then(() => {
-      if (cancelled || !mountedRef.current) return;
-      setIsYTReady(true);
-    });
-    return () => { cancelled = true; };
-  }, [playing, hasYoutube]);
-
-  // Create / recreate player only when playing+ready+activeId changes
-  useEffect(() => {
-    if (!playing || !isYTReady || !activeId) return;
-
-    const elId = playerContainerId;
-    // Destroy previous before creating new
-    const prev = playerRef.current as { destroy?: () => void } | null;
-    if (prev?.destroy) {
-      try { prev.destroy(); } catch {}
-      playerRef.current = null;
-    }
-    clearTimer();
-    clearTimeouts();
-
-    let cancelled = false;
-
-    const tryCreate = () => {
-      if (cancelled || !mountedRef.current) return;
-      const el = document.getElementById(elId);
-      if (!el) {
-        const tid = window.setTimeout(tryCreate, 50) as unknown as number;
-        timeoutsRef.current.push(tid);
-        return;
-      }
-      if (!window.YT?.Player) return;
-      const YTPlayer = window.YT.Player;
-      playerRef.current = new YTPlayer(elId, {
-        videoId: activeId,
-        playerVars: {
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          iv_load_policy: 3,
-          fs: 0,
-          disablekb: 1,
-          autoplay: 1,
-          cc_load_policy: 1,
-          cc_lang_pref: selectedCaption || "th",
-          hl: selectedCaption || "th",
-          origin: typeof window !== "undefined" ? window.location.origin : undefined,
-        },
-        events: {
-          onReady: (e: { target: { getDuration: () => number; setVolume: (v: number) => void; mute: () => void; loadModule?: (m: string) => void; setOption?: (a: string, b: string, c: unknown) => void; playVideo: () => void } }) => {
-            if (cancelled || !mountedRef.current) return;
-            setDuration(e.target.getDuration?.() || 0);
-            e.target.setVolume(volume);
-            if (muted) e.target.mute();
-            try {
-              e.target.loadModule?.("captions");
-              if (selectedCaption) {
-                e.target.setOption?.("captions", "track", { languageCode: selectedCaption });
-              }
-            } catch {}
-            e.target.playVideo();
-            setIsPlaying(true);
-            const t1 = window.setTimeout(() => syncTracksFromPlayer(), 800) as unknown as number;
-            const t2 = window.setTimeout(() => syncTracksFromPlayer(), 2000) as unknown as number;
-            timeoutsRef.current.push(t1, t2);
-          },
-          onStateChange: (e: { data: number }) => {
-            if (!mountedRef.current) return;
-            if (e.data === 1) setIsPlaying(true);
-            else if (e.data === 2) setIsPlaying(false);
-            else if (e.data === 0) {
-              setIsPlaying(false);
-              setCurrent(0);
-            }
-          },
-        },
-      });
-    };
-    tryCreate();
-
-    return () => {
-      cancelled = true;
-      clearTimer();
-      clearTimeouts();
-      const p = playerRef.current as { destroy?: () => void } | null;
-      if (p?.destroy) {
-        try { p.destroy(); } catch {}
-        playerRef.current = null;
-      }
-    };
-    // Intentionally exclude volume/muted/theater/caption menu etc. to avoid recreating player
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isYTReady, playing, activeId]);
-
-  // Update caption when language changes
-  useEffect(() => {
-    const p = playerRef.current as { loadModule?: (m: string) => void; setOption?: (a: string, b: string, c: unknown) => void } | null;
-    if (!p || !playing || !isYTReady) return;
-    try {
-      p.loadModule?.("captions");
-      if (useCustomSub) {
-        p.setOption?.("captions", "track", {});
-      } else if (selectedCaption) {
-        p.setOption?.("captions", "track", { languageCode: selectedCaption });
-      } else {
-        p.setOption?.("captions", "track", {});
-      }
-    } catch {}
-  }, [selectedCaption, useCustomSub, playing, isYTReady]);
-
-  // Poll time
-  useEffect(() => {
-    if (!playing || !isYTReady) return;
-    clearTimer();
-    timerRef.current = window.setInterval(() => {
-      const p = playerRef.current as { getCurrentTime?: () => number; getDuration?: () => number } | null;
-      if (!p || typeof p.getCurrentTime !== "function") return;
-      try {
-        const c = p.getCurrentTime();
-        const d = p.getDuration?.();
-        if (!mountedRef.current) return;
-        if (!isNaN(c)) setCurrent(c);
-        if (d !== undefined && !isNaN(d) && d > 0) setDuration(d);
-      } catch {}
-    }, 200) as unknown as number;
-    return () => { clearTimer(); };
-  }, [playing, isYTReady, isPlaying, clearTimer]);
-
-  const togglePlay = useCallback(() => {
-    const p = playerRef.current as { getPlayerState?: () => number; pauseVideo?: () => void; playVideo?: () => void } | null;
-    if (!p) return;
-    try {
-      const state = p.getPlayerState?.();
-      if (state === 1) {
-        p.pauseVideo?.();
-        if (mountedRef.current) setIsPlaying(false);
-      } else {
-        p.playVideo?.();
-        if (mountedRef.current) setIsPlaying(true);
-      }
-    } catch {}
-  }, []);
-
-  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    setCurrent(v);
-    (playerRef.current as { seekTo?: (v: number, b: boolean) => void } | null)?.seekTo?.(v, true);
-  }, []);
-
-  const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    setVolume(v);
-    (playerRef.current as { setVolume?: (v: number) => void; unMute?: () => void } | null)?.setVolume?.(v);
-    if (v === 0) setMuted(true);
-    else if (muted) {
-      setMuted(false);
-      (playerRef.current as { unMute?: () => void } | null)?.unMute?.();
-    }
-  }, [muted]);
-
-  const toggleMute = useCallback(() => {
-    const p = playerRef.current as { unMute?: () => void; mute?: () => void; setVolume?: (v: number) => void } | null;
-    if (!p) return;
-    if (muted) {
-      p.unMute?.();
-      p.setVolume?.(volume || 80);
-      setMuted(false);
-    } else {
-      p.mute?.();
-      setMuted(true);
-    }
-  }, [muted, volume]);
-
-  const toggleFullscreen = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen();
-    else el.requestFullscreen?.();
-  }, []);
-
-  const closePlayer = useCallback(() => {
-    destroyPlayer();
-    if (mountedRef.current) {
-      setPlaying(false);
-      setIsYTReady(false);
-      setIsPlaying(false);
-      setCurrent(0);
-    }
-  }, [destroyPlayer]);
 
   if (!hasYoutube && !showHlsFallback) {
     return (
@@ -610,13 +296,10 @@ export default function TrailerPlayer({ title, youtubeId, youtubeDubId, animeId,
         )}
       </div>
 
+      {/* P3.2: dead Watchlist/Share buttons removed — both rendered without
+          handlers, so they looked functional but silently did nothing. The
+          status line below stays as the honest trailer/dub/sub indicator. */}
       <div className={cn("mt-3 flex flex-wrap items-center gap-2 text-xs", theater && "px-4 py-3 bg-[#0a0a0f] border-t border-white/10 mt-0")}>
-        <button className="inline-flex items-center gap-1.5 rounded-full bg-white text-black px-3 py-1.5 font-semibold hover:bg-zinc-100">
-          <Bookmark className="h-3.5 w-3.5" /> เพิ่ม Watchlist
-        </button>
-        <button className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/10 px-3 py-1.5 text-white hover:bg-white/10">
-          <Share2 className="h-3.5 w-3.5" /> แชร์
-        </button>
         <span className="text-zinc-500 ml-1 hidden sm:inline">YouTube iframe • Custom UI • ตัวอย่างแนะนำ • {useCustomSub ? "ซับทำเอง ✓" : `ซับจริง ${captionTracks.length}ภาษา ${captionTracks.map(t=>t.lang).slice(0,4).join("/")}`} {hasVerifiedDub ? "• พากย์ไทย" : hasCustomSub ? "• มีซับทำเอง" : `• ${DUB_UNAVAILABLE_LABEL}`}</span>
         {theater && (
           <button onClick={() => setTheater(false)} className="ml-auto rounded-full bg-white text-black px-4 py-1.5 font-bold">
