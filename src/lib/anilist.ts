@@ -133,20 +133,10 @@ export function toAnime(a: AniAnime, rank?: number): Anime {
     // P1.5: AniList trailer ไม่ใช่หลักฐานพากย์ไทย — dub ต้องมาจาก dubMap ที่ยืนยันแล้วเท่านั้น
     trailerDubYoutubeId: undefined,
     trailerThumbnail: a.trailer?.thumbnail || undefined,
-    episodes:
-      status === "ยังไม่ฉาย"
-        ? []
-        : Array.from({ length: Math.min(a.episodes || 12, 24) }, (_, i) => ({
-            id: `ep-${i + 1}`,
-            number: i + 1,
-            title: `Episode ${i + 1}`,
-            titleTh: `ตอนที่ ${i + 1}`,
-            duration: "23:42",
-            hlsUrl: undefined,
-            thumbnail: a.coverImage.extraLarge,
-            views: views - i * 17000,
-            updatedAt: `2024-12-${String(10 + (i % 20)).padStart(2, "0")}`,
-          })),
+    provenance: "live-derived",
+    // P3.3: live-derived episode list is unverified — keep empty rather
+    // than fabricate per-episode metadata (views, dates, hlsUrl, titles).
+    episodes: [],
   };
 }
 

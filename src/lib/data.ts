@@ -16,7 +16,7 @@ export type Anime = { id: string; slug: string; title: string; titleTh: string; 
    * Removal condition: safe to drop only after confirming no CMS payload,
    * test fixture, or serialized cache reads this key.
    */
-  trailerDubYoutubeId?: string; trailerThumbnail?: string; };
+  trailerDubYoutubeId?: string; trailerThumbnail?: string; provenance?: "verified" | "live-derived"; };
 
 /**
  * @deprecated P2.3 ARCH-05 — raw, unvalidated env passthrough. Kept only for

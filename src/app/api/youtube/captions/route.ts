@@ -55,10 +55,13 @@ type WatchCaptionTrack = {
 function parseWatchTracks(html: string): CaptionTrack[] | null {
   const capMatch = html.match(/"captionTracks":(\[.*?\])/);
   if (!capMatch) return null;
-  const arr = JSON.parse(capMatch[1]) as WatchCaptionTrack[];
+  const raw = capMatch[1];
+  // Bounded protection: never buffer oversized caption JSON.
+  if (raw.length > 50_000) throw new Error("captionTracks too large");
+  const arr = JSON.parse(raw) as WatchCaptionTrack[];
   if (!Array.isArray(arr)) throw new Error("captionTracks is not an array");
   return arr
-    .filter((c) => typeof c.languageCode === "string" && c.languageCode.length > 0)
+    .filter((c) => typeof c.languageCode === "string" && c.languageCode.length > 0 && (typeof c.kind === "string" || c.kind === undefined || c.kind === null))
     .map((c) => ({
       lang: c.languageCode as string,
       name: c.name?.simpleText || (c.languageCode as string),
@@ -198,6 +201,10 @@ export async function GET(req: NextRequest) {
         logFailure("watch", v, "oversized");
       } else {
         const html = await watchRes.text();
+        // Post-read bounded check: header may be missing/lying.
+        if (html.length > MAX_WATCH_BYTES) {
+          logFailure("watch", v, "oversized-post-read");
+        } else {
         try {
           const tracks = parseWatchTracks(html);
           if (tracks && tracks.length > 0) {
@@ -214,6 +221,7 @@ export async function GET(req: NextRequest) {
         } catch (err) {
           // Malformed caption JSON is an upstream failure, never "empty".
           logFailure("watch", v, `bad-caption-json:${reasonOf(err)}`);
+        }
         }
       }
     } catch (err) {
