@@ -6,6 +6,7 @@ import { AnimeCard } from "@/components/AnimeCard";
 import CategoryPills from "@/components/CategoryPills";
 import { getSiteUrl } from "@/lib/env";
 import { buildCanonicalUrl } from "@/lib/seo";
+import { GENRE_TABLE } from "@/lib/genres";
 
 export const revalidate = 3600;
 
@@ -24,11 +25,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const cat = decodeURIComponent(slug);
   if (!(categories as readonly string[]).includes(cat)) return {};
   const canonical = buildCanonicalUrl(getSiteUrl(), `/category/${encodeURIComponent(cat)}`);
+  const genreLabel = GENRE_TABLE.find((g) => g.th === cat)?.anilist ?? cat;
   return {
     title: `หมวดหมู่${cat} — แนะนำอนิเมะ${cat} | ANIMEKU`,
-    description: `แนะนำอนิเมะแนว${cat} รีวิว จัดอันดับ ดูตัวอย่างแนะนำก่อนตัดสินใจ`,
+    description: `แนะนำอนิเมะแนว${cat} (${genreLabel}) — รีวิว จัดอันดับ ดูตัวอย่างแนะนำก่อนตัดสินใจ. หมวดหมู่จากแคตалог 13 หมวดจริง (ไม่ขยาย)`,
     alternates: { canonical },
-    openGraph: { title: `หมวดหมู่: ${cat}`, description: `แนะนำอนิเมะแนว${cat}`, url: canonical },
+    openGraph: { title: `หมวดหมู่: ${cat}`, description: `แนะนำอนิเมะแนว${cat} (${genreLabel}) — รีวิว จัดอันดับ`, url: canonical },
   };
 }
 

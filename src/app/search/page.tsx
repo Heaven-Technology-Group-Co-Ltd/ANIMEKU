@@ -1,9 +1,28 @@
 import { searchAnimes } from "@/lib/data";
 import { searchAnilist, toAnime } from "@/lib/anilist";
 import { AnimeCard } from "@/components/AnimeCard";
+import type { Metadata } from "next";
+import { buildCanonicalUrl } from "@/lib/seo";
+import { getSiteUrl } from "@/lib/env";
 
-export const metadata = { title: "ค้นหาอนิเมะ" };
 export const revalidate = 3600;
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string }> }): Promise<Metadata> {
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q.trim() : "";
+  const encoded = query ? encodeURIComponent(query) : "";
+  const title = query ? `ค้นหา "${query}" — ผลลัพธ์อนิเมะ | ANIMEKU` : "ค้นหาอนิเมะ — ผลลัพธ์จาก Top 100 + AniList | ANIMEKU";
+  const description = query
+    ? `ผลลัพธ์การค้นหา "${query}" บน ANIMEKU — รีวิว จัดอันดับ ดูตัวอย่างก่อนตัดสินใจ`
+    : "ค้นหาอนิเมะจาก Top 100 (verified) และ Live จาก AniList — รองรับชื่อไทย/อังกฤษ/ญี่ปุ่น";
+  const canonical = query ? buildCanonicalUrl(getSiteUrl(), `/search?q=${encoded}`) : buildCanonicalUrl(getSiteUrl(), "/search");
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical },
+  };
+}
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
