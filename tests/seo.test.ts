@@ -109,7 +109,7 @@ describe("buildCanonicalUrl", () => {
     expect(buildCanonicalUrl(SITE, "/anime/999-test-anime")).toBe(`${SITE}/anime/999-test-anime`);
     expect(buildCanonicalUrl(`${SITE}/`, "//anime//999-test-anime")).toBe(`${SITE}/anime/999-test-anime`);
     expect(buildCanonicalUrl(SITE, "/search?q=x#frag")).toBe(`${SITE}/search`);
-    expect(buildCanonicalUrl(SITE, "/")).toBe(`${SITE}/`);
+expect(buildCanonicalUrl(SITE, "/")).toBe(`${SITE}/`);
   });
 
   it("encodes/de-codes segments safely and produces stable output", () => {
@@ -121,8 +121,8 @@ describe("buildCanonicalUrl", () => {
   });
 
   it("handles empty path and root without extra slashes", () => {
-    expect(buildCanonicalUrl(SITE, "/")).toBe(`${SITE}/`);
-    expect(buildCanonicalUrl(SITE, "/search/")).toBe(`${SITE}/search`);
+expect(buildCanonicalUrl(SITE, "/")).toBe(`${SITE}/`);
+expect(buildCanonicalUrl(SITE, "/search/")).toBe(`${SITE}/search`);
   });
 });
 

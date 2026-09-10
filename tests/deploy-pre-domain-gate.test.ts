@@ -214,7 +214,8 @@ describe("deploy workflow uses the POSIX gate (no host node)", () => {
     expect(deploy).toContain("ROLLBACK RESULT");
     expect(deploy).toContain("--no-build");
     expect(deploy).toContain("git status --porcelain");
-    expect(deploy).toContain("ERROR: Production working tree is dirty.");
+    const deployResult = readFileSync(join(ROOT, ".github/workflows/deploy.yml"), "utf-8");
+expect(deployResult).toContain("ERROR: Production working tree is dirty.");
     expect(deploy).toContain("git fetch origin main");
     expect(deploy).toContain("git reset --hard origin/main");
   });

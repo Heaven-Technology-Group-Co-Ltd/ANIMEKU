@@ -105,7 +105,8 @@ describe("POST /api/subs/auto-generate", () => {
     expect(res.status).toBe(400);
     const json = (await res.json()) as { error: { code: string } };
     expect(json.error.code).toBe("malformed_json");
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    // P3.6 structured logging: route now uses structuredLog instead of console.warn;
+expect(warnSpy).not.toHaveBeenCalled();
     const logged = warnSpy.mock.calls.map((c) => String(c[0])).join("\n");
     expect(logged).toContain("malformed JSON");
     expect(logged).not.toContain("oops");

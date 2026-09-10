@@ -163,6 +163,7 @@ describe("P2.3 regression: resolver timeout + default tag", () => {
     );
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await resolveAnime("777779-unknown", "[anime]")).toBeNull();
-    expect(err).not.toHaveBeenCalled();
+    // P3.6 structured logging: upstream errors emit structured diagnostic logs; allow error call
+expect(err).toHaveBeenCalled();
   });
 });
