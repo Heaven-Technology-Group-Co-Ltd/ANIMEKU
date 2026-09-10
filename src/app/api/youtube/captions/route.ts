@@ -8,6 +8,7 @@ import {
   type CaptionTrack,
   type CaptionsSource,
 } from "@/lib/api-contract";
+import { structuredLog } from "@/lib/structured-log";
 
 export const revalidate = 3600; // cache 1h
 
@@ -78,8 +79,13 @@ function tooLarge(res: Response, maxBytes: number): boolean {
 }
 
 function logFailure(stage: string, v: string, reason: string): void {
-  // One line, validated videoId only. Never log HTML, stacks, or secrets.
-  console.error(`[captions] ${stage} failed v=${v} reason=${reason}`);
+  structuredLog("api:captions", "degradation", {
+    stage,
+    videoId: v,
+    failure_class: reason,
+    provider: "youtube",
+    route: "/api/youtube/captions",
+  });
 }
 
 function reasonOf(err: unknown): string {
@@ -253,5 +259,13 @@ export async function GET(req: NextRequest) {
     source: "error",
     ...errorBody("upstream_error", "caption providers unavailable"),
   };
+  structuredLog("api:captions", "upstream_error", {
+    route: "/api/youtube/captions",
+    status: 502,
+    failure_class: "all_providers_failed",
+    provider: "youtube",
+    videoId: v,
+    cache_state: "miss",
+  });
   return NextResponse.json(body, { status: 502 });
 }

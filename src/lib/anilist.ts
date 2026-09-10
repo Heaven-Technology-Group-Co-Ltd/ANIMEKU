@@ -1,5 +1,6 @@
 // AniList Live fetcher (ISR 1 ชม.)
 import { fetchWithTimeout, FETCH_TIMEOUTS_MS } from "./fetch-timeout";
+import { structuredLog } from "./structured-log";
 
 const ANILIST_URL = "https://graphql.anilist.co";
 
@@ -34,19 +35,45 @@ query($page: Int, $perPage: Int, $genre: String, $search: String, $sort: [MediaS
 
 async function gql(query: string, variables: Record<string, unknown>) {
   // P2.2: bounded upstream wait; callers degrade gracefully on throw.
-  const res = await fetchWithTimeout(
-    ANILIST_URL,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query, variables }),
-      next: { revalidate: 3600 }, // ISR 1h
-    },
-    FETCH_TIMEOUTS_MS.anilist,
-  );
-  if (!res.ok) throw new Error(`AniList ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(
+      ANILIST_URL,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ query, variables }),
+        next: { revalidate: 3600 }, // ISR 1h
+      },
+      FETCH_TIMEOUTS_MS.anilist,
+    );
+  } catch (err) {
+    structuredLog("anilist", "timeout", {
+      route: "/api/*",
+      failure_class: err instanceof Error ? err.name : "unknown",
+      provider: "anilist",
+    });
+    throw err;
+  }
+  if (!res.ok) {
+    structuredLog("anilist", "failure", {
+      route: "/api/*",
+      status: res.status,
+      failure_class: "http_error",
+      provider: "anilist",
+    });
+    throw new Error(`AniList ${res.status}`);
+  }
   const j = await res.json();
-  if (j.errors) throw new Error(j.errors[0].message);
+  if (j.errors) {
+    structuredLog("anilist", "failure", {
+      route: "/api/*",
+      failure_class: "graphql_error",
+      message: typeof j.errors[0]?.message === "string" ? j.errors[0].message.slice(0, 120) : "unknown",
+      provider: "anilist",
+    });
+    throw new Error(j.errors[0].message);
+  }
   return j.data;
 }
 
@@ -64,6 +91,15 @@ export async function searchAnilist(search: string, perPage = 24): Promise<AniAn
 export async function getAnimeByIdAni(id: number): Promise<AniAnime | null> {
   const q = `query($id:Int){ Media(id:$id,type:ANIME){ id title{ romaji english native } coverImage{ extraLarge large } bannerImage averageScore seasonYear season episodes status studios(isMain:true){ nodes{ name }} genres trailer{ id site thumbnail } description popularity } }`;
   const data = await gql(q, { id });
+  if (!data || !data.Media) {
+    structuredLog("anilist", "fallback", {
+      route: "/api/*",
+      animeId: id,
+      failure_class: "missing_media",
+      provider: "anilist",
+    });
+    return null;
+  }
   return data.Media as AniAnime;
 }
 

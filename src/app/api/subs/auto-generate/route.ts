@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAnimeByIdAni, toAnime } from "@/lib/anilist";
 import { checkRateLimit, clientIdFromHeaders, RATE_LIMIT_PRESETS } from "@/lib/rate-limit";
 import { errorBody, normalizeVideoId, parseAnimeId } from "@/lib/api-contract";
+import { structuredLog } from "@/lib/structured-log";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,11 @@ export async function POST(req: NextRequest) {
   } catch {
     // Safe client behavior (still 4xx) + server observability. Never log the
     // body itself (unbounded, client-controlled) and never leak parser detail.
-    console.warn("[subs/auto-generate] malformed JSON body");
+    structuredLog("api:autogenerate", "degradation", {
+      route: "/api/subs/auto-generate",
+      failure_class: "malformed_json_body",
+      status: 400,
+    });
     return NextResponse.json(errorBody("malformed_json", "malformed JSON body"), {
       status: 400,
     });
@@ -84,9 +89,12 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       // One line, numeric id only. No stack, no upstream payload.
-      console.error(
-        `[subs/auto-generate] AniList lookup failed animeId=${numId} reason=${err instanceof Error ? err.name : "unknown"}`,
-      );
+      structuredLog("anilist", "failure", {
+        route: "/api/subs/auto-generate",
+        animeId: numId,
+        failure_class: err instanceof Error ? err.name : "unknown",
+        provider: "anilist",
+      });
     }
   }
 
