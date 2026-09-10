@@ -36,11 +36,13 @@ export const metadata: Metadata = {
     siteName: "ANIMEKU",
     title: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์",
     description: "แนะนำอนิเมะ รีวิว จัดอันดับ ซับไทย พากย์ไทย คัดมาแล้วว่าเด็ดจริง",
+    images: [{ url: "/animeku/animeku.webp", width: 2048, height: 2048, alt: "ANIMEKU" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "ANIMEKU — แนะนำอนิเมะถูกลิขสิทธิ์",
     description: "แนะนำอนิเมะ รีวิว จัดอันดับ ซับไทย พากย์ไทย",
+    images: ["/animeku/animeku.webp"],
   },
   robots: {
     index: true,
@@ -48,6 +50,17 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
   alternates: { canonical: "/" },
+  manifest: "/animeku/manifest.json",
+  icons: {
+    icon: "/animeku/favicon.ico",
+    shortcut: "/animeku/favicon.ico",
+    apple: "/animeku/apple-touch-icon.png",
+    other: [
+      { rel: "apple-touch-icon", url: "/animeku/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "icon", url: "/animeku/icon-192.png", type: "image/png", sizes: "192x192" },
+      { rel: "icon", url: "/animeku/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

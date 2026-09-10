@@ -7,9 +7,7 @@ export default function Footer() {
         <div className="grid gap-8 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff3b82] to-[#7c3aed] text-sm font-black text-white">
-                A
-              </div>
+              <img src="/animeku/animeku.webp" alt="ANIMEKU" className="h-8 w-8 rounded-lg object-cover shadow-[0_0_12px_rgba(255,59,130,0.35)]" />
               <span className="text-lg font-black">
                 <span className="text-white">ANIME</span>
                 <span className="text-[#ff3b82]">KU</span>

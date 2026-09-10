@@ -29,9 +29,11 @@ export default function Header() {
         <div className="flex h-[64px] items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#ff3b82] to-[#7c3aed] text-sm font-black text-white">
-              A
-            </div>
+            <img
+              src="/animeku/animeku.webp"
+              alt="ANIMEKU"
+              className="h-8 w-8 rounded-lg object-cover shadow-[0_0_12px_rgba(255,59,130,0.35)]"
+            />
             <span className="text-[20px] font-black tracking-tight">
               <span className="text-white">ANIME</span>
               <span className="text-[#ff3b82]">KU</span>

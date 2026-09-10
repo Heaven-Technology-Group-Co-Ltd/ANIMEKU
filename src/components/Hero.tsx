@@ -91,7 +91,7 @@ export default function Hero({ anime }: { anime: Anime }) {
           <div className="hidden lg:block">
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#12121a] shadow-2xl">
               <div className="relative aspect-video bg-zinc-900">
-                <Image src={anime.cover} alt={anime.titleTh} fill className="object-cover" />
+                <Image src={anime.cover} alt={anime.titleTh} fill priority loading="eager" sizes="360px" className="object-cover" />
                 <div className="absolute inset-0 bg-black/30" />
                 <Link
                   href={`/watch/${anime.slug}/1`}
