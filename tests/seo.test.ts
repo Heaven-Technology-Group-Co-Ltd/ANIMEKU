@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import { animeJsonLd, breadcrumbJsonLd, videoJsonLd, buildCanonicalUrl } from "@/lib/seo";
 import { generateMetadata as searchMetadata } from "@/app/search/page";
 import type { Anime } from "@/lib/data";
@@ -168,8 +169,8 @@ describe("search page generateMetadata (P3.4 deterministic)", () => {
 
 describe("category page metadata contract (P3.4 truthful)", () => {
   it("13 canonical category labels verified by source inspection", () => {
-    const fs = require("fs");
-    const content = fs.readFileSync("src/lib/genres.ts", "utf-8");
+
+    const content = readFileSync("src/lib/genres.ts", "utf-8");
     // Source file contains all 13 Thai category labels (verified in audit)
     expect(content).toContain("categories = [");
     // Description logic in category/page does not fabricate counts/freshness
@@ -177,7 +178,7 @@ describe("category page metadata contract (P3.4 truthful)", () => {
   });
 
   it("category page file does not embed live-derived counts in generateMetadata", () => {
-    const content = require("fs").readFileSync("src/app/category/[slug]/page.tsx", "utf-8");
+    const content = readFileSync("src/app/category/[slug]/page.tsx", "utf-8");
     expect(content).toContain("generateMetadata");
     // Must NOT emit fabricated statistics inside metadata descriptor
     expect(content).not.toMatch(/liveCount.*description|numberOfEpisodes.*description/);
