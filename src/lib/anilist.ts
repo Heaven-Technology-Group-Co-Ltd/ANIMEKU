@@ -11,7 +11,7 @@ export type AniAnime = {
   averageScore: number | null;
   seasonYear: number | null;
   season: string | null;
-  episodes: number | null;
+episodes: [], // P3.3 provenance: live episode media unverified; synthetic episode objects intentionally omitted
   status: string;
   studios: { nodes: { name: string }[] };
   genres: string[];
@@ -133,7 +133,7 @@ export function toAnime(a: AniAnime, rank?: number): Anime {
     // P1.5: AniList trailer ไม่ใช่หลักฐานพากย์ไทย — dub ต้องมาจาก dubMap ที่ยืนยันแล้วเท่านั้น
     trailerDubYoutubeId: undefined,
     trailerThumbnail: a.trailer?.thumbnail || undefined,
-episodes: (a.episodes && a.episodes > 0) ? [] : [], // P3.3 provenance: verified catalog only; no synthetic episode/media/date
+episodes: [], // P3.3 provenance: live episode media unverified; synthetic episode objects intentionally omitted
 }
 
 };
