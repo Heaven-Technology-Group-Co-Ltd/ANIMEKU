@@ -133,8 +133,10 @@ export function toAnime(a: AniAnime, rank?: number): Anime {
     // P1.5: AniList trailer ไม่ใช่หลักฐานพากย์ไทย — dub ต้องมาจาก dubMap ที่ยืนยันแล้วเท่านั้น
     trailerDubYoutubeId: undefined,
     trailerThumbnail: a.trailer?.thumbnail || undefined,
-episodes: (a.episodes && a.episodes > 0) ? [] : [], // P3.3 provenance: no synthetic episode/media data; verified catalog only
+episodes: (a.episodes && a.episodes > 0) ? [] : [], // P3.3 provenance: verified catalog only; no synthetic episode/media/date
+}
 
-// P2.3 ARCH-04: canonical category source is `./genres`.
-// Re-exported here so existing `@/lib/anilist` import paths keep working.
+};
+//P2.3 ARCH-04: canonical category source`./genres`.
+//Re-exported existing `@/lib/anilist` import paths keep working.
 export { categories as CATEGORY_THAI } from "./genres";
