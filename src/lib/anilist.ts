@@ -11,7 +11,7 @@ export type AniAnime = {
   averageScore: number | null;
   seasonYear: number | null;
   season: string | null;
-episodes: [], // P3.3 provenance: live episode media unverified; synthetic episode objects intentionally omitted
+episodes: number, // P3.3 provenance: live episode media unverified; synthetic episode objects intentionally omitted
   status: string;
   studios: { nodes: { name: string }[] };
   genres: string[];
