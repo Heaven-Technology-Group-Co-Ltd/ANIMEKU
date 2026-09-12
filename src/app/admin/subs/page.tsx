@@ -1,30 +1,11 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { customSubs } from "@/lib/customSubs";
+import { loadYouTubeAPI } from "@/lib/youtube-loader";
 
 type Cue = { start: number; end: number; text: string };
 
 import type { YTPlayerInstance, YTPlayerEvent, YTPlayerStateEvent } from "@/types/youtube";
-
-function loadYT(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.YT?.Player) return Promise.resolve();
-  if (document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-    return new Promise((res) => {
-      const orig = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        orig?.();
-        res();
-      };
-    });
-  }
-  return new Promise((res) => {
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => res();
-  });
-}
 
 export default function SubsEditorPage() {
   const [videoId, setVideoId] = useState("k4xGqY5IDBE");
@@ -85,7 +66,7 @@ export default function SubsEditorPage() {
   // load player
   useEffect(() => {
     let cancelled = false;
-    loadYT().then(() => {
+    loadYouTubeAPI().then(() => {
       if (cancelled) return;
       createPlayer(videoId);
     });
@@ -149,6 +130,14 @@ export default function SubsEditorPage() {
           เปิดคลิป → กดเล่น → กด S/E เก็บเวลา → พิมพ์ซับ → Export ไปวางใน{" "}
           <code className="bg-white/10 px-1 rounded">customSubs.ts</code> จบ เรื่องต่อไป 2 นาที
         </p>
+        {/* P3.2: honest tooling label — client-only preview, no persistence */}
+        <div className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/[0.07] p-3 text-xs leading-5 text-sky-200">
+          <b>Internal tooling preview</b> — client-only, no persistence, no API, no
+          database. หน้านี้เป็นเครื่องมือภายในสำหรับจูนซับเท่านั้น (ไม่ใช่ฟีเจอร์
+          production): โหลดคลิป YouTube ใดๆ มาลองได้, export โค้ดแล้วไปวางใน{" "}
+          <code className="bg-white/10 px-1 rounded">customSubs.ts</code> เอง —
+          refresh แล้วงานที่ยังไม่ export จะหาย
+        </div>
 
         {/* Video + controls */}
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">

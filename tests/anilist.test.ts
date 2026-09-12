@@ -132,15 +132,15 @@ describe("toAnime mapping", () => {
 
   it("generates episodes array based on status and episode count", () => {
     const finished = toAnime(makeAni({ status: "FINISHED", episodes: 12 }));
-    expect(finished.episodes).toHaveLength(12);
-    expect(finished.episodes[0].number).toBe(1);
-    expect(finished.episodes[0].views).toBe(finished.views);
+    expect(finished.episodes).toEqual([]) // P3.3: no synthetic episode objects;
+    expect(finished.episodes[0]).toBeUndefined() // no fabricated episode array;
+    expect(finished.episodesTotal).toBe(12) // verified numeric preserved;
 
     const notYet = toAnime(makeAni({ status: "NOT_YET_RELEASED", episodes: 12 }));
     expect(notYet.episodes).toHaveLength(0);
 
     const capped = toAnime(makeAni({ status: "FINISHED", episodes: 100 }));
-    expect(capped.episodes).toHaveLength(24); // capped at 24
+expect(capped.episodes).toEqual([]) // P3.3: verified provenance — no synthetic arrays
   });
 
   it("uses fallback values for missing studio/cover", () => {
